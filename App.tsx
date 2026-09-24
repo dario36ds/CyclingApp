@@ -1,17 +1,9 @@
-import React, {useState} from 'react';
-import {
-  Text,
-  View,
-  NativeSyntheticEvent,
-} from 'react-native';
+import React, { useState } from 'react';
+import { Text, View, NativeSyntheticEvent, Pressable } from 'react-native';
 
-import {
-  Camera,
-  Map,
-  ViewAnnotation,
-} from '@maplibre/maplibre-react-native';
+import { Camera, Map, ViewAnnotation } from '@maplibre/maplibre-react-native';
 
-import {styles} from './src/styles/mapStyle.ts';
+import { styles } from './src/styles/mapStyle.ts';
 
 type Coordinate = [number, number];
 
@@ -22,13 +14,17 @@ type MapPressEvent = NativeSyntheticEvent<{
 function App() {
   const [waypoints, setWaypoints] = useState<Coordinate[]>([]);
 
- const handleMapPress = (event: MapPressEvent) => {
-  const [lng, lat] = event.nativeEvent.lngLat;
+  const handleMapPress = (event: MapPressEvent) => {
+    const [lng, lat] = event.nativeEvent.lngLat;
 
-  const newWaypoint: Coordinate = [lng, lat];
+    const newWaypoint: Coordinate = [lng, lat];
 
-  setWaypoints(current => [...current, newWaypoint]);
-};
+    setWaypoints(current => [...current, newWaypoint]);
+  };
+
+  const clearWaypoints = () => {
+  setWaypoints([]);
+  };
 
   return (
     <View style={styles.container}>
@@ -51,13 +47,21 @@ function App() {
             anchor="center"
           >
             <View style={styles.marker}>
-              <Text style={styles.markerText}>
-                {index + 1}
-              </Text>
+              <Text style={styles.markerText}>{index + 1}</Text>
             </View>
           </ViewAnnotation>
         ))}
       </Map>
+      {waypoints.length > 0 && (
+  <Pressable
+    style={styles.clearButton}
+    onPress={clearWaypoints}
+  >
+    <Text style={styles.clearButtonText}>
+      Cancella waypoint
+    </Text>
+  </Pressable>
+)}
     </View>
   );
 }

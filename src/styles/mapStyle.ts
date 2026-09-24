@@ -26,4 +26,22 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+
+  clearButton: {
+  position: 'absolute',
+  bottom: 40,
+  left: 20,
+  right: 20,
+  height: 50,
+  borderRadius: 14,
+  backgroundColor: '#111827',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+clearButtonText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '700',
+},
 });
