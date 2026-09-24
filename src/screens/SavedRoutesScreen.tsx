@@ -1,6 +1,7 @@
 import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -12,7 +13,10 @@ import {useFocusEffect} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
 import type {RootTabParamList} from '../navigation/types';
-import {getSavedRoutes} from '../services/savedRoutesService';
+import {
+  deleteSavedRoute,
+  getSavedRoutes,
+} from '../services/savedRoutesService';
 import type {SavedRoute} from '../types/route';
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
@@ -37,6 +41,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
   const [routes, setRoutes] = useState<SavedRoute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadRoutes = useCallback(async (refreshing = false) => {
@@ -74,6 +79,42 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
     }, [loadRoutes]),
   );
 
+  const confirmDeleteRoute = (routeToDelete: SavedRoute) => {
+    Alert.alert(
+      'Elimina percorso',
+      `Vuoi eliminare “${routeToDelete.name}”? Questa azione non può essere annullata.`,
+      [
+        {text: 'Annulla', style: 'cancel'},
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingRouteId(routeToDelete.id);
+
+            try {
+              await deleteSavedRoute(routeToDelete.id);
+              setRoutes(currentRoutes =>
+                currentRoutes.filter(route => route.id !== routeToDelete.id),
+              );
+            } catch (error: unknown) {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : 'Errore sconosciuto.';
+
+              Alert.alert(
+                'Eliminazione non riuscita',
+                `Non è stato possibile eliminare il percorso.\n\nDettaglio: ${message}`,
+              );
+            } finally {
+              setDeletingRouteId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   if (isLoading) {
     return (
       <View style={styles.centeredContainer}>
@@ -100,32 +141,51 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
         />
       }
       renderItem={({item}) => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Apri il percorso ${item.name}`}
-          accessibilityHint="Mostra il percorso sulla mappa"
-          style={({pressed}) => [styles.card, pressed && styles.cardPressed]}
-          onPress={() => navigation.navigate('Map', {savedRoute: item})}
-        >
-          <View style={styles.cardHeader}>
-            <View style={styles.routeIcon}>
-              <Text style={styles.routeIconText}>↗</Text>
+        <View style={styles.card}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Apri il percorso ${item.name}`}
+            accessibilityHint="Mostra il percorso sulla mappa"
+            style={({pressed}) => pressed && styles.cardPressed}
+            onPress={() => navigation.navigate('Map', {savedRoute: item})}
+          >
+            <View style={styles.cardHeader}>
+              <View style={styles.routeIcon}>
+                <Text style={styles.routeIconText}>↗</Text>
+              </View>
+              <View style={styles.cardTitleContainer}>
+                <Text style={styles.routeName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <Text style={styles.routeDate}>
+                  {formatCreatedAt(item.createdAt)}
+                </Text>
+              </View>
             </View>
-            <View style={styles.cardTitleContainer}>
-              <Text style={styles.routeName} numberOfLines={2}>
-                {item.name}
-              </Text>
-              <Text style={styles.routeDate}>
-                {formatCreatedAt(item.createdAt)}
-              </Text>
-            </View>
-          </View>
+          </Pressable>
           <View style={styles.divider} />
-          <Text style={styles.waypointCount}>
-            {item.waypoints.length}{' '}
-            {item.waypoints.length === 1 ? 'punto' : 'punti'} del percorso
-          </Text>
-        </Pressable>
+          <View style={styles.cardFooter}>
+            <Text style={styles.waypointCount}>
+              {item.waypoints.length}{' '}
+              {item.waypoints.length === 1 ? 'punto' : 'punti'} del percorso
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Elimina il percorso ${item.name}`}
+              disabled={deletingRouteId !== null}
+              hitSlop={8}
+              style={({pressed}) => [
+                styles.deleteButton,
+                pressed && styles.deleteButtonPressed,
+              ]}
+              onPress={() => confirmDeleteRoute(item)}
+            >
+              <Text style={styles.deleteButtonText}>
+                {deletingRouteId === item.id ? 'Eliminazione...' : 'Elimina'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       )}
       ListEmptyComponent={
         <View style={styles.emptyState}>
@@ -214,10 +274,31 @@ const styles = StyleSheet.create({
     marginVertical: 14,
     backgroundColor: '#F0F0F1',
   },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   waypointCount: {
+    flex: 1,
     color: '#52525B',
     fontSize: 14,
     fontWeight: '600',
+  },
+  deleteButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+  },
+  deleteButtonPressed: {
+    opacity: 0.65,
+  },
+  deleteButtonText: {
+    color: '#B91C1C',
+    fontSize: 14,
+    fontWeight: '700',
   },
   emptyState: {
     flex: 1,

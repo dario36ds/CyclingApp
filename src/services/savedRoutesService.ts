@@ -23,6 +23,15 @@ export async function getSavedRoutes(): Promise<SavedRoute[]> {
   return Array.isArray(parsedValue) ? (parsedValue as SavedRoute[]) : [];
 }
 
+export async function deleteSavedRoute(routeId: string): Promise<void> {
+  const savedRoutes = await getSavedRoutes();
+
+  await routeStorage.setItem(
+    SAVED_ROUTES_KEY,
+    JSON.stringify(savedRoutes.filter(route => route.id !== routeId)),
+  );
+}
+
 export async function saveRoute({
   name,
   waypoints,
