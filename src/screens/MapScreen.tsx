@@ -1,5 +1,12 @@
 import React, {useState} from 'react';
-import {NativeSyntheticEvent, Text, View} from 'react-native';
+import {
+  Alert,
+  Modal,
+  NativeSyntheticEvent,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   Camera,
   GeoJSONSource,
@@ -10,9 +17,9 @@ import {
 
 import {Button, ButtonText} from '../components/ui/button';
 import {calculateRoute} from '../services/openRouteService';
+import {saveRoute} from '../services/savedRoutesService';
 import {styles} from '../styles/mapStyle';
-
-type Coordinate = [number, number];
+import type {Coordinate} from '../types/route';
 
 type Waypoint = {
   id: number;
@@ -29,6 +36,9 @@ export function MapScreen() {
   const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
     null,
   );
+  const [isSavingRoute, setIsSavingRoute] = useState(false);
+  const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
+  const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
 
   const handleMapPress = (event: MapPressEvent) => {
@@ -78,6 +88,50 @@ export function MapScreen() {
       ),
     );
     setRoute(null);
+  };
+
+  const openSaveRouteModal = () => {
+    setRouteName('');
+    setIsSaveModalVisible(true);
+  };
+
+  const closeSaveRouteModal = () => {
+    if (!isSavingRoute) {
+      setIsSaveModalVisible(false);
+    }
+  };
+
+  const handleSaveRoute = async () => {
+    const trimmedRouteName = routeName.trim();
+
+    if (!route || isSavingRoute || !trimmedRouteName) {
+      return;
+    }
+
+    setIsSavingRoute(true);
+
+    try {
+      await saveRoute({
+        name: trimmedRouteName,
+        waypoints: waypoints.map(waypoint => waypoint.coordinate),
+        geoJson: route,
+      });
+      setIsSaveModalVisible(false);
+      Alert.alert(
+        'Percorso salvato',
+        `Il percorso “${trimmedRouteName}” è stato salvato sul dispositivo.`,
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Errore sconosciuto.';
+
+      Alert.alert(
+        'Salvataggio non riuscito',
+        `Non è stato possibile salvare il percorso.\n\nDettaglio: ${errorMessage}`,
+      );
+    } finally {
+      setIsSavingRoute(false);
+    }
   };
 
   return (
@@ -148,11 +202,26 @@ export function MapScreen() {
         <Button
           variant="destructive"
           size="lg"
-          className="absolute bottom-[168px] left-5 right-5 h-12 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
+          className="absolute left-5 right-5 h-12 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
+          style={{bottom: route ? 232 : 168}}
           onPress={() => removeWaypoint(selectedWaypointId)}
         >
           <ButtonText className="text-base font-bold text-white">
             Elimina waypoint selezionato
+          </ButtonText>
+        </Button>
+      )}
+
+      {route && (
+        <Button
+          variant="secondary"
+          size="lg"
+          className="absolute bottom-[168px] left-5 right-5 h-12 rounded-2xl bg-sky-700 shadow-lg data-[active=true]:bg-sky-800"
+          isDisabled={isSavingRoute}
+          onPress={openSaveRouteModal}
+        >
+          <ButtonText className="text-base font-bold text-white">
+            {isSavingRoute ? 'Salvataggio...' : 'Salva percorso'}
           </ButtonText>
         </Button>
       )}
@@ -168,6 +237,50 @@ export function MapScreen() {
           </ButtonText>
         </Button>
       )}
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isSaveModalVisible}
+        onRequestClose={closeSaveRouteModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Nome del percorso</Text>
+            <TextInput
+              style={styles.routeNameInput}
+              value={routeName}
+              onChangeText={setRouteName}
+              placeholder="Es. Giro del lago"
+              placeholderTextColor="#71717A"
+              autoFocus
+              maxLength={80}
+              returnKeyType="done"
+              onSubmitEditing={handleSaveRoute}
+            />
+
+            <View style={styles.modalActions}>
+              <Button
+                variant="outline"
+                style={styles.modalActionButton}
+                isDisabled={isSavingRoute}
+                onPress={closeSaveRouteModal}
+              >
+                <ButtonText>Annulla</ButtonText>
+              </Button>
+              <Button
+                style={styles.modalActionButton}
+                isDisabled={!routeName.trim() || isSavingRoute}
+                onPress={handleSaveRoute}
+              >
+                <ButtonText>
+                  {isSavingRoute ? 'Salvataggio...' : 'Salva'}
+                </ButtonText>
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
