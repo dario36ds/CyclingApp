@@ -3,6 +3,7 @@ import {
   Alert,
   Modal,
   NativeSyntheticEvent,
+  Switch,
   Text,
   TextInput,
   View,
@@ -14,10 +15,15 @@ import {
   Map,
   ViewAnnotation,
 } from '@maplibre/maplibre-react-native';
-import type {CameraRef, LngLatBounds} from '@maplibre/maplibre-react-native';
+import type {
+  CameraRef,
+  LngLatBounds,
+  StyleSpecification,
+} from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
 import {Button, ButtonText} from '../components/ui/button';
+import {useMapPreferences} from '../context/MapPreferencesContext';
 import type {RootTabParamList} from '../navigation/types';
 import {calculateRoute} from '../services/openRouteService';
 import {saveRoute} from '../services/savedRoutesService';
@@ -35,8 +41,47 @@ type MapPressEvent = NativeSyntheticEvent<{
 
 type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
 
+const STREET_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+
+const HYBRID_MAP_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    satellite: {
+      type: 'raster',
+      tiles: [
+        'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution:
+        'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    },
+    hybridReference: {
+      type: 'raster',
+      tiles: [
+        'https://who.maptiles.arcgis.com/arcgis/rest/services/World_Hybrid_Overlay/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution: 'Reference overlay © Esri',
+    },
+  },
+  layers: [
+    {
+      id: 'satellite',
+      type: 'raster',
+      source: 'satellite',
+    },
+    {
+      id: 'hybridReference',
+      type: 'raster',
+      source: 'hybridReference',
+    },
+  ],
+};
+
 export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) {
   const cameraRef = useRef<CameraRef>(null);
+  const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
+    useMapPreferences();
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [nextWaypointId, setNextWaypointId] = useState(0);
   const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
@@ -185,7 +230,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     <View style={styles.container}>
       <Map
         style={styles.map}
-        mapStyle="https://tiles.openfreemap.org/styles/liberty"
+        mapStyle={
+          isSatelliteViewEnabled ? HYBRID_MAP_STYLE : STREET_MAP_STYLE
+        }
         onPress={handleMapPress}
       >
         <Camera
@@ -199,9 +246,22 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         {route && (
           <GeoJSONSource id="routeSource" data={route}>
             <Layer
+              id="routeOutline"
+              type="line"
+              paint={{
+                'line-color': isSatelliteViewEnabled ? '#FFFFFF' : '#166534',
+                'line-width': 8,
+                'line-opacity': 0.9,
+              }}
+              layout={{'line-cap': 'round', 'line-join': 'round'}}
+            />
+            <Layer
               id="routeLine"
               type="line"
-              paint={{'line-color': '#16A34A', 'line-width': 5}}
+              paint={{
+                'line-color': isSatelliteViewEnabled ? '#FDE047' : '#16A34A',
+                'line-width': 5,
+              }}
               layout={{'line-cap': 'round', 'line-join': 'round'}}
             />
           </GeoJSONSource>
@@ -232,6 +292,18 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           </ViewAnnotation>
         ))}
       </Map>
+
+      <View style={styles.mapTypeToggle}>
+        <Text style={styles.mapTypeLabel}>Satellite ibrida</Text>
+        <Switch
+          accessibilityLabel="Vista satellitare ibrida"
+          value={isSatelliteViewEnabled}
+          trackColor={{false: '#D4D4D8', true: '#059669'}}
+          thumbColor="#FFFFFF"
+          ios_backgroundColor="#D4D4D8"
+          onValueChange={setSatelliteViewEnabled}
+        />
+      </View>
 
       {waypoints.length > 0 && (
         <Button

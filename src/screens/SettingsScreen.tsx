@@ -1,13 +1,31 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Switch, Text, View} from 'react-native';
+
+import {useMapPreferences} from '../context/MapPreferencesContext';
 
 export function SettingsScreen() {
+  const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
+    useMapPreferences();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Impostazioni</Text>
-      <Text style={styles.description}>
-        Le opzioni dell'app verranno aggiunte qui nei prossimi step.
-      </Text>
+      <Text style={styles.sectionTitle}>Mappa</Text>
+      <View style={styles.settingCard}>
+        <View style={styles.settingText}>
+          <Text style={styles.settingTitle}>Vista satellitare ibrida</Text>
+          <Text style={styles.description}>
+            Mostra immagini satellitari con nomi di città, strade e confini.
+          </Text>
+        </View>
+        <Switch
+          accessibilityLabel="Vista satellitare ibrida"
+          value={isSatelliteViewEnabled}
+          trackColor={{false: '#D4D4D8', true: '#059669'}}
+          thumbColor="#FFFFFF"
+          ios_backgroundColor="#D4D4D8"
+          onValueChange={setSatelliteViewEnabled}
+        />
+      </View>
     </View>
   );
 }
@@ -18,15 +36,34 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: '#F7F8F7',
   },
-  title: {
+  sectionTitle: {
     color: '#18181B',
-    fontSize: 24,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  settingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+  },
+  settingText: {
+    flex: 1,
+  },
+  settingTitle: {
+    color: '#18181B',
+    fontSize: 16,
     fontWeight: '700',
   },
   description: {
-    marginTop: 8,
+    marginTop: 5,
     color: '#71717A',
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
