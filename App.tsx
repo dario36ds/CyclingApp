@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View, NativeSyntheticEvent, Pressable } from 'react-native';
+import { Text, View, NativeSyntheticEvent } from 'react-native';
 
 import {
   Camera,
@@ -11,6 +11,10 @@ import {
 
 import { styles } from './src/styles/mapStyle';
 import { calculateRoute } from './src/services/openRouteService';
+
+import { GluestackUIProvider } from '@/src/components/ui/gluestack-ui-provider';
+import { Button, ButtonText } from '@/src/components/ui/button';
+import '@/global.css';
 
 type Coordinate = [number, number];
 
@@ -83,87 +87,104 @@ function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <Map
-        style={styles.map}
-        mapStyle="https://tiles.openfreemap.org/styles/liberty"
-        onPress={handleMapPress}
-      >
-        <Camera
-          initialViewState={{
-            center: [12.5674, 41.8719],
-            zoom: 5.5,
-          }}
-        />
+    <GluestackUIProvider mode="light">
+      <View style={styles.container}>
+        <Map
+          style={styles.map}
+          mapStyle="https://tiles.openfreemap.org/styles/liberty"
+          onPress={handleMapPress}
+        >
+          <Camera
+            initialViewState={{
+              center: [12.5674, 41.8719],
+              zoom: 5.5,
+            }}
+          />
 
-        {route && (
-          <GeoJSONSource id="routeSource" data={route}>
-            <Layer
-              id="routeLine"
-              type="line"
-              paint={{
-                'line-color': '#16A34A',
-                'line-width': 5,
+          {route && (
+            <GeoJSONSource id="routeSource" data={route}>
+              <Layer
+                id="routeLine"
+                type="line"
+                paint={{
+                  'line-color': '#16A34A',
+                  'line-width': 5,
+                }}
+                layout={{
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                }}
+              />
+            </GeoJSONSource>
+          )}
+
+          {waypoints.map(({ id, coordinate }, index) => (
+            <ViewAnnotation
+              key={id}
+              id={`waypoint-${id}`}
+              lngLat={coordinate}
+              anchor="center"
+              draggable
+              onPress={event => {
+                event.stopPropagation();
+                setSelectedWaypointId(id);
               }}
-              layout={{
-                'line-cap': 'round',
-                'line-join': 'round',
-              }}
-            />
-          </GeoJSONSource>
+              onDragStart={() => setSelectedWaypointId(id)}
+              onDragEnd={event =>
+                moveWaypoint(id, event.nativeEvent.lngLat)
+              }
+            >
+              <View
+                style={[
+                  styles.marker,
+                  selectedWaypointId === id && styles.selectedMarker,
+                ]}
+              >
+                <Text style={styles.markerText}>{index + 1}</Text>
+              </View>
+            </ViewAnnotation>
+          ))}
+        </Map>
+
+        {waypoints.length > 0 && (
+          <Button
+            variant="outline"
+            size="lg"
+            className="absolute bottom-10 left-5 right-5 h-12 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100"
+            onPress={clearWaypoints}
+          >
+            <ButtonText className="text-base font-bold text-zinc-900">
+              Cancella waypoint
+            </ButtonText>
+          </Button>
         )}
 
-        {waypoints.map(({ id, coordinate }, index) => (
-          <ViewAnnotation
-            key={id}
-            id={`waypoint-${id}`}
-            lngLat={coordinate}
-            anchor="center"
-            draggable
-            onPress={event => {
-              event.stopPropagation();
-              setSelectedWaypointId(id);
-            }}
-            onDragStart={() => setSelectedWaypointId(id)}
-            onDragEnd={event =>
-              moveWaypoint(id, event.nativeEvent.lngLat)
-            }
+        {selectedWaypointId !== null && (
+          <Button
+            variant="destructive"
+            size="lg"
+            className="absolute bottom-[168px] left-5 right-5 h-12 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
+            onPress={() => removeWaypoint(selectedWaypointId)}
           >
-            <View
-              style={[
-                styles.marker,
-                selectedWaypointId === id && styles.selectedMarker,
-              ]}
-            >
-              <Text style={styles.markerText}>{index + 1}</Text>
-            </View>
-          </ViewAnnotation>
-        ))}
-      </Map>
+            <ButtonText className="text-base font-bold text-white">
+              Elimina waypoint selezionato
+            </ButtonText>
+          </Button>
+        )}
 
-      {waypoints.length > 0 && (
-        <Pressable style={styles.clearButton} onPress={clearWaypoints}>
-          <Text style={styles.clearButtonText}>Cancella waypoint</Text>
-        </Pressable>
-      )}
-
-      {selectedWaypointId !== null && (
-        <Pressable
-          style={styles.deleteWaypointButton}
-          onPress={() => removeWaypoint(selectedWaypointId)}
-        >
-          <Text style={styles.deleteWaypointButtonText}>
-            Elimina waypoint selezionato
-          </Text>
-        </Pressable>
-      )}
-
-      {waypoints.length >= 2 && (
-        <Pressable style={styles.routeButton} onPress={handleCalculateRoute}>
-          <Text style={styles.routeButtonText}>Calcola percorso</Text>
-        </Pressable>
-      )}
-    </View>
+        {waypoints.length >= 2 && (
+          <Button
+            size="lg"
+            className="absolute bottom-[104px] left-5 right-5 h-12 rounded-2xl bg-emerald-600 shadow-lg data-[active=true]:bg-emerald-700"
+            onPress={handleCalculateRoute}
+          >
+            <ButtonText className="text-base font-bold text-white">
+              Calcola percorso
+            </ButtonText>
+          </Button>
+        )}
+      </View>
+    </GluestackUIProvider>
   );
 }
 
