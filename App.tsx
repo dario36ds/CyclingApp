@@ -6,10 +6,28 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {GluestackUIProvider} from '@/src/components/ui/gluestack-ui-provider';
 import type {RootTabParamList} from './src/navigation/types';
 import {MapScreen} from './src/screens/MapScreen';
+import {SavedRoutesScreen} from './src/screens/SavedRoutesScreen';
 import {SettingsScreen} from './src/screens/SettingsScreen';
 import '@/global.css';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
+
+type TabIconProps = {
+  color: string;
+  size: number;
+};
+
+function MapTabIcon({color, size}: TabIconProps) {
+  return <Text style={{color, fontSize: size}}>⌖</Text>;
+}
+
+function SavedRoutesTabIcon({color, size}: TabIconProps) {
+  return <Text style={{color, fontSize: size}}>≡</Text>;
+}
+
+function SettingsTabIcon({color, size}: TabIconProps) {
+  return <Text style={{color, fontSize: size}}>⚙</Text>;
+}
 
 function App() {
   return (
@@ -35,9 +53,16 @@ function App() {
             options={{
               title: 'Percorso',
               tabBarLabel: 'Mappa',
-              tabBarIcon: ({color, size}) => (
-                <Text style={{color, fontSize: size}}>⌖</Text>
-              ),
+              tabBarIcon: MapTabIcon,
+            }}
+          />
+          <Tab.Screen
+            name="SavedRoutes"
+            component={SavedRoutesScreen}
+            options={{
+              title: 'Percorsi salvati',
+              tabBarLabel: 'Salvati',
+              tabBarIcon: SavedRoutesTabIcon,
             }}
           />
           <Tab.Screen
@@ -45,9 +70,7 @@ function App() {
             component={SettingsScreen}
             options={{
               title: 'Impostazioni',
-              tabBarIcon: ({color, size}) => (
-                <Text style={{color, fontSize: size}}>⚙</Text>
-              ),
+              tabBarIcon: SettingsTabIcon,
             }}
           />
         </Tab.Navigator>

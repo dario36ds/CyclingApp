@@ -1,4 +1,7 @@
+import type {SavedRoute} from '../types/route';
+
 export type RootTabParamList = {
-  Map: undefined;
+  Map: {savedRoute?: SavedRoute} | undefined;
+  SavedRoutes: undefined;
   Settings: undefined;
 };

@@ -11,16 +11,24 @@ type SaveRouteInput = {
   geoJson: unknown;
 };
 
+export async function getSavedRoutes(): Promise<SavedRoute[]> {
+  const storedValue = await routeStorage.getItem(SAVED_ROUTES_KEY);
+
+  if (!storedValue) {
+    return [];
+  }
+
+  const parsedValue: unknown = JSON.parse(storedValue);
+
+  return Array.isArray(parsedValue) ? (parsedValue as SavedRoute[]) : [];
+}
+
 export async function saveRoute({
   name,
   waypoints,
   geoJson,
 }: SaveRouteInput): Promise<SavedRoute> {
-  const storedValue = await routeStorage.getItem(SAVED_ROUTES_KEY);
-  const parsedValue: unknown = storedValue ? JSON.parse(storedValue) : [];
-  const savedRoutes = Array.isArray(parsedValue)
-    ? (parsedValue as SavedRoute[])
-    : [];
+  const savedRoutes = await getSavedRoutes();
 
   const savedRoute: SavedRoute = {
     id: `route-${Date.now()}`,

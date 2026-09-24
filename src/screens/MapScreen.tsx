@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   Alert,
   Modal,
@@ -14,8 +14,11 @@ import {
   Map,
   ViewAnnotation,
 } from '@maplibre/maplibre-react-native';
+import type {CameraRef, LngLatBounds} from '@maplibre/maplibre-react-native';
+import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
 import {Button, ButtonText} from '../components/ui/button';
+import type {RootTabParamList} from '../navigation/types';
 import {calculateRoute} from '../services/openRouteService';
 import {saveRoute} from '../services/savedRoutesService';
 import {styles} from '../styles/mapStyle';
@@ -30,7 +33,10 @@ type MapPressEvent = NativeSyntheticEvent<{
   lngLat: Coordinate;
 }>;
 
-export function MapScreen() {
+type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
+
+export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) {
+  const cameraRef = useRef<CameraRef>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [nextWaypointId, setNextWaypointId] = useState(0);
   const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
@@ -40,6 +46,47 @@ export function MapScreen() {
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
+
+  useEffect(() => {
+    const savedRoute = navigationRoute.params?.savedRoute;
+
+    if (!savedRoute) {
+      return;
+    }
+
+    setWaypoints(
+      savedRoute.waypoints.map((coordinate, id) => ({id, coordinate})),
+    );
+    setNextWaypointId(savedRoute.waypoints.length);
+    setSelectedWaypointId(null);
+    setRoute(savedRoute.geoJson);
+
+    if (savedRoute.waypoints.length > 0) {
+      const longitudes = savedRoute.waypoints.map(([longitude]) => longitude);
+      const latitudes = savedRoute.waypoints.map(([, latitude]) => latitude);
+      const longitudePadding = Math.max(
+        (Math.max(...longitudes) - Math.min(...longitudes)) * 0.08,
+        0.005,
+      );
+      const latitudePadding = Math.max(
+        (Math.max(...latitudes) - Math.min(...latitudes)) * 0.08,
+        0.005,
+      );
+      const bounds: LngLatBounds = [
+        Math.min(...longitudes) - longitudePadding,
+        Math.min(...latitudes) - latitudePadding,
+        Math.max(...longitudes) + longitudePadding,
+        Math.max(...latitudes) + latitudePadding,
+      ];
+
+      cameraRef.current?.fitBounds(bounds, {
+        padding: {top: 48, right: 32, bottom: 224, left: 32},
+        duration: 700,
+      });
+    }
+
+    navigation.setParams({savedRoute: undefined});
+  }, [navigation, navigationRoute.params?.savedRoute]);
 
   const handleMapPress = (event: MapPressEvent) => {
     const [lng, lat] = event.nativeEvent.lngLat;
@@ -142,6 +189,7 @@ export function MapScreen() {
         onPress={handleMapPress}
       >
         <Camera
+          ref={cameraRef}
           initialViewState={{
             center: [12.5674, 41.8719],
             zoom: 5.5,
