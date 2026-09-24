@@ -1,15 +1,41 @@
-import React from 'react';
-import {StyleSheet, View} from 'react-native';
-import {Camera, Map} from '@maplibre/maplibre-react-native';
+import React, {useState} from 'react';
+import {
+  Text,
+  View,
+  NativeSyntheticEvent,
+} from 'react-native';
+
+import {
+  Camera,
+  Map,
+  ViewAnnotation,
+} from '@maplibre/maplibre-react-native';
+
+import {styles} from './src/styles/mapStyle.ts';
+
+type Coordinate = [number, number];
+
+type MapPressEvent = NativeSyntheticEvent<{
+  lngLat: [number, number];
+}>;
 
 function App() {
+  const [waypoints, setWaypoints] = useState<Coordinate[]>([]);
+
+ const handleMapPress = (event: MapPressEvent) => {
+  const [lng, lat] = event.nativeEvent.lngLat;
+
+  const newWaypoint: Coordinate = [lng, lat];
+
+  setWaypoints(current => [...current, newWaypoint]);
+};
+
   return (
     <View style={styles.container}>
       <Map
         style={styles.map}
         mapStyle="https://tiles.openfreemap.org/styles/liberty"
-        attribution
-        logo
+        onPress={handleMapPress}
       >
         <Camera
           initialViewState={{
@@ -17,23 +43,23 @@ function App() {
             zoom: 5.5,
           }}
         />
+
+        {waypoints.map((coordinate, index) => (
+          <ViewAnnotation
+            key={`${coordinate[0]}-${coordinate[1]}-${index}`}
+            lngLat={coordinate}
+            anchor="center"
+          >
+            <View style={styles.marker}>
+              <Text style={styles.markerText}>
+                {index + 1}
+              </Text>
+            </View>
+          </ViewAnnotation>
+        ))}
       </Map>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EAF0EC',
-  },
-  map: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-});
 
 export default App;
