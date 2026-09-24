@@ -1,189 +1,57 @@
-import React, { useState } from 'react';
-import { Text, View, NativeSyntheticEvent } from 'react-native';
+import React from 'react';
+import {Text} from 'react-native';
+import {NavigationContainer} from '@react-navigation/native';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
-import {
-  Camera,
-  Map,
-  ViewAnnotation,
-  GeoJSONSource,
-  Layer,
-} from '@maplibre/maplibre-react-native';
-
-import { styles } from './src/styles/mapStyle';
-import { calculateRoute } from './src/services/openRouteService';
-
-import { GluestackUIProvider } from '@/src/components/ui/gluestack-ui-provider';
-import { Button, ButtonText } from '@/src/components/ui/button';
+import {GluestackUIProvider} from '@/src/components/ui/gluestack-ui-provider';
+import type {RootTabParamList} from './src/navigation/types';
+import {MapScreen} from './src/screens/MapScreen';
+import {SettingsScreen} from './src/screens/SettingsScreen';
 import '@/global.css';
 
-type Coordinate = [number, number];
-
-type Waypoint = {
-  id: number;
-  coordinate: Coordinate;
-};
-
-type MapPressEvent = NativeSyntheticEvent<{
-  lngLat: [number, number];
-}>;
+const Tab = createBottomTabNavigator<RootTabParamList>();
 
 function App() {
-  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [nextWaypointId, setNextWaypointId] = useState(0);
-  const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
-    null,
-  );
-  const [route, setRoute] = useState<any>(null);
-
-  const handleMapPress = (event: MapPressEvent) => {
-    const [lng, lat] = event.nativeEvent.lngLat;
-
-    const newWaypoint: Waypoint = {
-      id: nextWaypointId,
-      coordinate: [lng, lat],
-    };
-
-    setWaypoints(current => [...current, newWaypoint]);
-    setNextWaypointId(current => current + 1);
-    setSelectedWaypointId(null);
-    setRoute(null);
-  };
-
-  const clearWaypoints = () => {
-    setWaypoints([]);
-    setSelectedWaypointId(null);
-    setRoute(null);
-  };
-
-  const handleCalculateRoute = async () => {
-    if (waypoints.length < 2) {
-      return;
-    }
-
-    try {
-      const routeData = await calculateRoute(
-        waypoints.map(waypoint => waypoint.coordinate),
-      );
-
-      setRoute(routeData);
-    } catch (error) {
-      console.error('Errore durante il calcolo del percorso:', error);
-    }
-  };
-
-  const removeWaypoint = (idToRemove: number) => {
-    setWaypoints(current => current.filter(({ id }) => id !== idToRemove));
-    setSelectedWaypointId(null);
-    setRoute(null);
-  };
-
-  const moveWaypoint = (idToMove: number, coordinate: Coordinate) => {
-    setWaypoints(current =>
-      current.map(waypoint =>
-        waypoint.id === idToMove ? {...waypoint, coordinate} : waypoint,
-      ),
-    );
-    setRoute(null);
-  };
-
   return (
     <GluestackUIProvider mode="light">
-      <View style={styles.container}>
-        <Map
-          style={styles.map}
-          mapStyle="https://tiles.openfreemap.org/styles/liberty"
-          onPress={handleMapPress}
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            headerShadowVisible: false,
+            headerStyle: {backgroundColor: '#FFFFFF'},
+            headerTitleStyle: {color: '#18181B', fontWeight: '700'},
+            tabBarActiveTintColor: '#047857',
+            tabBarInactiveTintColor: '#71717A',
+            tabBarLabelStyle: {fontSize: 12, fontWeight: '600'},
+            tabBarStyle: {
+              backgroundColor: '#FFFFFF',
+              borderTopColor: '#E4E4E7',
+            },
+          }}
         >
-          <Camera
-            initialViewState={{
-              center: [12.5674, 41.8719],
-              zoom: 5.5,
+          <Tab.Screen
+            name="Map"
+            component={MapScreen}
+            options={{
+              title: 'Percorso',
+              tabBarLabel: 'Mappa',
+              tabBarIcon: ({color, size}) => (
+                <Text style={{color, fontSize: size}}>⌖</Text>
+              ),
             }}
           />
-
-          {route && (
-            <GeoJSONSource id="routeSource" data={route}>
-              <Layer
-                id="routeLine"
-                type="line"
-                paint={{
-                  'line-color': '#16A34A',
-                  'line-width': 5,
-                }}
-                layout={{
-                  'line-cap': 'round',
-                  'line-join': 'round',
-                }}
-              />
-            </GeoJSONSource>
-          )}
-
-          {waypoints.map(({ id, coordinate }, index) => (
-            <ViewAnnotation
-              key={id}
-              id={`waypoint-${id}`}
-              lngLat={coordinate}
-              anchor="center"
-              draggable
-              onPress={event => {
-                event.stopPropagation();
-                setSelectedWaypointId(id);
-              }}
-              onDragStart={() => setSelectedWaypointId(id)}
-              onDragEnd={event =>
-                moveWaypoint(id, event.nativeEvent.lngLat)
-              }
-            >
-              <View
-                style={[
-                  styles.marker,
-                  selectedWaypointId === id && styles.selectedMarker,
-                ]}
-              >
-                <Text style={styles.markerText}>{index + 1}</Text>
-              </View>
-            </ViewAnnotation>
-          ))}
-        </Map>
-
-        {waypoints.length > 0 && (
-          <Button
-            variant="outline"
-            size="lg"
-            className="absolute bottom-10 left-5 right-5 h-12 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100"
-            onPress={clearWaypoints}
-          >
-            <ButtonText className="text-base font-bold text-zinc-900">
-              Cancella waypoint
-            </ButtonText>
-          </Button>
-        )}
-
-        {selectedWaypointId !== null && (
-          <Button
-            variant="destructive"
-            size="lg"
-            className="absolute bottom-[168px] left-5 right-5 h-12 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
-            onPress={() => removeWaypoint(selectedWaypointId)}
-          >
-            <ButtonText className="text-base font-bold text-white">
-              Elimina waypoint selezionato
-            </ButtonText>
-          </Button>
-        )}
-
-        {waypoints.length >= 2 && (
-          <Button
-            size="lg"
-            className="absolute bottom-[104px] left-5 right-5 h-12 rounded-2xl bg-emerald-600 shadow-lg data-[active=true]:bg-emerald-700"
-            onPress={handleCalculateRoute}
-          >
-            <ButtonText className="text-base font-bold text-white">
-              Calcola percorso
-            </ButtonText>
-          </Button>
-        )}
-      </View>
+          <Tab.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              title: 'Impostazioni',
+              tabBarIcon: ({color, size}) => (
+                <Text style={{color, fontSize: size}}>⚙</Text>
+              ),
+            }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
     </GluestackUIProvider>
   );
 }
