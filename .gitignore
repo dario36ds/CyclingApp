@@ -21,6 +21,11 @@ DerivedData
 *.ipa
 *.xcuserstate
 **/.xcode.env.local
+**/xcuserdata/
+
+
+# CocoaPods
+ios/Pods/
 
 # Android/IntelliJ
 #

@@ -1,37 +1,23 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import React from 'react';
+import {StyleSheet, View} from 'react-native';
+import {Camera, Map} from '@maplibre/maplibre-react-native';
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
   return (
     <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
+      <Map
+        style={styles.map}
+        mapStyle="https://tiles.openfreemap.org/styles/liberty"
+        attribution
+        logo
+      >
+        <Camera
+          initialViewState={{
+            center: [12.5674, 41.8719],
+            zoom: 5.5,
+          }}
+        />
+      </Map>
     </View>
   );
 }
@@ -39,6 +25,14 @@ function AppContent() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#EAF0EC',
+  },
+  map: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
 });
 
