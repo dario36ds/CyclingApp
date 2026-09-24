@@ -3,7 +3,8 @@ import { Text, View, NativeSyntheticEvent, Pressable } from 'react-native';
 
 import { Camera, Map, ViewAnnotation } from '@maplibre/maplibre-react-native';
 
-import { styles } from './src/styles/mapStyle.ts';
+import { styles } from './src/styles/mapStyle';
+import {calculateRoute} from './src/services/openRouteService';
 
 type Coordinate = [number, number];
 
@@ -25,6 +26,20 @@ function App() {
   const clearWaypoints = () => {
   setWaypoints([]);
   };
+
+  const handleCalculateRoute = async () => {
+  if (waypoints.length < 2) {
+    return;
+  }
+
+  try {
+    const route = await calculateRoute(waypoints);
+
+    console.log('Percorso ORS:', route);
+  } catch (error) {
+    console.error('Errore durante il calcolo del percorso:', error);
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -62,7 +77,18 @@ function App() {
     </Text>
   </Pressable>
 )}
+{waypoints.length >= 2 && (
+  <Pressable
+    style={styles.routeButton}
+    onPress={handleCalculateRoute}
+  >
+    <Text style={styles.routeButtonText}>
+      Calcola percorso
+    </Text>
+  </Pressable>
+)}
     </View>
+
   );
 }
 

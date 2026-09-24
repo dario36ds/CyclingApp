@@ -44,4 +44,22 @@ clearButtonText: {
   fontSize: 16,
   fontWeight: '700',
 },
+
+routeButton: {
+  position: 'absolute',
+  bottom: 105,
+  left: 20,
+  right: 20,
+  height: 50,
+  borderRadius: 14,
+  backgroundColor: '#16A34A',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+routeButtonText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '700',
+},
 });
