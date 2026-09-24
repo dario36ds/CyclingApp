@@ -21,6 +21,11 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  selectedMarker: {
+    backgroundColor: '#16A34A',
+    borderColor: '#FDE047',
+  },
+
   markerText: {
     color: '#FFFFFF',
     fontSize: 15,
@@ -58,6 +63,24 @@ routeButton: {
 },
 
 routeButtonText: {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '700',
+},
+
+deleteWaypointButton: {
+  position: 'absolute',
+  bottom: 170,
+  left: 20,
+  right: 20,
+  height: 50,
+  borderRadius: 14,
+  backgroundColor: '#DC2626',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+deleteWaypointButtonText: {
   color: '#FFFFFF',
   fontSize: 16,
   fontWeight: '700',
