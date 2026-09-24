@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { Text, View, NativeSyntheticEvent, Pressable } from 'react-native';
 
-import { Camera, Map, ViewAnnotation } from '@maplibre/maplibre-react-native';
+import {
+  Camera,
+  Map,
+  ViewAnnotation,
+  GeoJSONSource,
+  Layer,
+} from '@maplibre/maplibre-react-native';
 
 import { styles } from './src/styles/mapStyle';
-import {calculateRoute} from './src/services/openRouteService';
+import { calculateRoute } from './src/services/openRouteService';
 
 type Coordinate = [number, number];
 
@@ -14,6 +20,7 @@ type MapPressEvent = NativeSyntheticEvent<{
 
 function App() {
   const [waypoints, setWaypoints] = useState<Coordinate[]>([]);
+  const [route, setRoute] = useState<any>(null);
 
   const handleMapPress = (event: MapPressEvent) => {
     const [lng, lat] = event.nativeEvent.lngLat;
@@ -24,22 +31,23 @@ function App() {
   };
 
   const clearWaypoints = () => {
-  setWaypoints([]);
+    setWaypoints([]);
+    setRoute(null);
   };
 
   const handleCalculateRoute = async () => {
-  if (waypoints.length < 2) {
-    return;
-  }
+    if (waypoints.length < 2) {
+      return;
+    }
 
-  try {
-    const route = await calculateRoute(waypoints);
+    try {
+      const routeData = await calculateRoute(waypoints);
 
-    console.log('Percorso ORS:', route);
-  } catch (error) {
-    console.error('Errore durante il calcolo del percorso:', error);
-  }
-};
+      setRoute(routeData);
+    } catch (error) {
+      console.error('Errore durante il calcolo del percorso:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -55,6 +63,23 @@ function App() {
           }}
         />
 
+        {route && (
+          <GeoJSONSource id="routeSource" data={route}>
+            <Layer
+              id="routeLine"
+              type="line"
+              paint={{
+                'line-color': '#16A34A',
+                'line-width': 5,
+              }}
+              layout={{
+                'line-cap': 'round',
+                'line-join': 'round',
+              }}
+            />
+          </GeoJSONSource>
+        )}
+
         {waypoints.map((coordinate, index) => (
           <ViewAnnotation
             key={`${coordinate[0]}-${coordinate[1]}-${index}`}
@@ -67,28 +92,19 @@ function App() {
           </ViewAnnotation>
         ))}
       </Map>
-      {waypoints.length > 0 && (
-  <Pressable
-    style={styles.clearButton}
-    onPress={clearWaypoints}
-  >
-    <Text style={styles.clearButtonText}>
-      Cancella waypoint
-    </Text>
-  </Pressable>
-)}
-{waypoints.length >= 2 && (
-  <Pressable
-    style={styles.routeButton}
-    onPress={handleCalculateRoute}
-  >
-    <Text style={styles.routeButtonText}>
-      Calcola percorso
-    </Text>
-  </Pressable>
-)}
-    </View>
 
+      {waypoints.length > 0 && (
+        <Pressable style={styles.clearButton} onPress={clearWaypoints}>
+          <Text style={styles.clearButtonText}>Cancella waypoint</Text>
+        </Pressable>
+      )}
+
+      {waypoints.length >= 2 && (
+        <Pressable style={styles.routeButton} onPress={handleCalculateRoute}>
+          <Text style={styles.routeButtonText}>Calcola percorso</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
