@@ -29,6 +29,11 @@ import {calculateRoute} from '../services/openRouteService';
 import {saveRoute} from '../services/savedRoutesService';
 import {styles} from '../styles/mapStyle';
 import type {Coordinate} from '../types/route';
+import {
+  formatDistance,
+  formatElevation,
+  getRouteStats,
+} from '../utils/routeStats';
 
 type Waypoint = {
   id: number;
@@ -91,6 +96,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
+  const routeStats = getRouteStats(route);
 
   useEffect(() => {
     const savedRoute = navigationRoute.params?.savedRoute;
@@ -304,6 +310,32 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           onValueChange={setSatelliteViewEnabled}
         />
       </View>
+
+      {routeStats && (
+        <View
+          accessible
+          accessibilityLabel={`Distanza ${formatDistance(
+            routeStats.distanceMeters,
+          )}, dislivello positivo ${formatElevation(
+            routeStats.ascentMeters,
+          )}`}
+          style={styles.routeStatsCard}
+        >
+          <View style={styles.routeStat}>
+            <Text style={styles.routeStatLabel}>DISTANZA</Text>
+            <Text style={styles.routeStatValue}>
+              {formatDistance(routeStats.distanceMeters)}
+            </Text>
+          </View>
+          <View style={styles.routeStatsDivider} />
+          <View style={styles.routeStat}>
+            <Text style={styles.routeStatLabel}>DISLIVELLO +</Text>
+            <Text style={styles.routeStatValue}>
+              {formatElevation(routeStats.ascentMeters)}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {waypoints.length > 0 && (
         <Button

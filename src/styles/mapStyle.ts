@@ -37,6 +37,52 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  routeStatsCard: {
+    position: 'absolute',
+    top: 76,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+
+  routeStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  routeStatLabel: {
+    color: '#71717A',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+
+  routeStatValue: {
+    marginTop: 2,
+    color: '#18181B',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+
+  routeStatsDivider: {
+    width: 1,
+    height: 34,
+    marginHorizontal: 14,
+    backgroundColor: '#E4E4E7',
+  },
+
   marker: {
     width: 34,
     height: 34,
