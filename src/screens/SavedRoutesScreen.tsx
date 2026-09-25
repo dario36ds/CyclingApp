@@ -21,6 +21,7 @@ import {
 import type {SavedRoute} from '../types/route';
 import {
   formatDistance,
+  formatDuration,
   formatElevation,
   getRouteStats,
 } from '../utils/routeStats';
@@ -163,12 +164,16 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
         const elevation = routeStats
           ? formatElevation(routeStats.ascentMeters)
           : '—';
+        const duration =
+          routeStats && routeStats.durationSeconds !== null
+            ? formatDuration(routeStats.durationSeconds)
+            : '—';
 
         return (
           <View style={styles.card}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Apri il percorso ${item.name}, distanza ${distance}, dislivello positivo ${elevation}`}
+              accessibilityLabel={`Apri il percorso ${item.name}, distanza ${distance}, dislivello positivo ${elevation}, tempo stimato ${duration}`}
               accessibilityHint="Mostra il percorso sulla mappa"
               style={({pressed}) => pressed && styles.cardPressed}
               onPress={() => openRoute(item)}
@@ -196,6 +201,11 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
                 <View style={styles.routeStat}>
                   <Text style={styles.routeStatLabel}>DISLIVELLO +</Text>
                   <Text style={styles.routeStatValue}>{elevation}</Text>
+                </View>
+                <View style={styles.routeStatsDivider} />
+                <View style={styles.routeStat}>
+                  <Text style={styles.routeStatLabel}>TEMPO</Text>
+                  <Text style={styles.routeStatValue}>{duration}</Text>
                 </View>
               </View>
             </Pressable>
@@ -317,23 +327,26 @@ const styles = StyleSheet.create({
   },
   routeStat: {
     flex: 1,
+    alignItems: 'center',
   },
   routeStatLabel: {
     color: '#71717A',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
   routeStatValue: {
     marginTop: 3,
     color: '#18181B',
     fontSize: 16,
     fontWeight: '700',
+    textAlign: 'center',
   },
   routeStatsDivider: {
     width: 1,
     height: 34,
-    marginHorizontal: 14,
+    marginHorizontal: 8,
     backgroundColor: '#D4D4D8',
   },
   divider: {

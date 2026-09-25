@@ -33,6 +33,7 @@ import {styles} from '../styles/mapStyle';
 import type {Coordinate} from '../types/route';
 import {
   formatDistance,
+  formatDuration,
   formatElevation,
   getElevationProfile,
   getRouteStats,
@@ -401,7 +402,13 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             routeStats.distanceMeters,
           )}, dislivello positivo ${formatElevation(
             routeStats.ascentMeters,
-          )}`}
+          )}${
+            routeStats.durationSeconds === null
+              ? ''
+              : `, tempo stimato ${formatDuration(
+                  routeStats.durationSeconds,
+                )}`
+          }`}
           style={styles.routeStatsCard}
         >
           <View style={styles.routeStat}>
@@ -415,6 +422,15 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             <Text style={styles.routeStatLabel}>DISLIVELLO +</Text>
             <Text style={styles.routeStatValue}>
               {formatElevation(routeStats.ascentMeters)}
+            </Text>
+          </View>
+          <View style={styles.routeStatsDivider} />
+          <View style={styles.routeStat}>
+            <Text style={styles.routeStatLabel}>TEMPO</Text>
+            <Text style={styles.routeStatValue}>
+              {routeStats.durationSeconds === null
+                ? '—'
+                : formatDuration(routeStats.durationSeconds)}
             </Text>
           </View>
         </View>

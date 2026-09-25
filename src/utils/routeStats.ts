@@ -1,11 +1,13 @@
 type RouteSummary = {
   distance?: number;
   ascent?: number;
+  duration?: number;
 };
 
 type RouteSegment = {
   distance?: number;
   ascent?: number;
+  duration?: number;
 };
 
 type RouteFeature = {
@@ -25,6 +27,7 @@ type RouteGeoJson = {
 export type RouteStats = {
   distanceMeters: number;
   ascentMeters: number;
+  durationSeconds: number | null;
 };
 
 export type ElevationPoint = {
@@ -123,6 +126,15 @@ export function getRouteStats(route: unknown): RouteStats | null {
           0,
         )
       : sumPositiveElevationGain(feature.geometry?.coordinates ?? []));
+  const durationSeconds =
+    typeof summary?.duration === 'number'
+      ? summary.duration
+      : segments.some(segment => typeof segment.duration === 'number')
+        ? segments.reduce(
+            (total, segment) => total + (segment.duration ?? 0),
+            0,
+          )
+        : null;
 
   if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) {
     return null;
@@ -131,6 +143,10 @@ export function getRouteStats(route: unknown): RouteStats | null {
   return {
     distanceMeters,
     ascentMeters: Number.isFinite(ascentMeters) ? Math.max(0, ascentMeters) : 0,
+    durationSeconds:
+      durationSeconds !== null && Number.isFinite(durationSeconds)
+        ? Math.max(0, durationSeconds)
+        : null,
   };
 }
 
@@ -213,4 +229,17 @@ export function formatDistance(distanceMeters: number) {
 
 export function formatElevation(ascentMeters: number) {
   return `${Math.round(ascentMeters).toLocaleString('it-IT')} m`;
+}
+
+export function formatDuration(durationSeconds: number) {
+  const totalMinutes = Math.max(1, Math.round(durationSeconds / 60));
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
 }
