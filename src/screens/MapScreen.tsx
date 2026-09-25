@@ -22,6 +22,7 @@ import type {
   StyleSpecification,
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {ElevationProfile} from '../components/ElevationProfile';
 import {RouteTerrainDetails} from '../components/RouteTerrainDetails';
@@ -92,6 +93,7 @@ const HYBRID_MAP_STYLE: StyleSpecification = {
 
 export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) {
   const cameraRef = useRef<CameraRef>(null);
+  const insets = useSafeAreaInsets();
   const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
     useMapPreferences();
   const {triggerHaptic} = useHapticFeedback();
@@ -112,6 +114,10 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const selectedWaypointIndex = waypoints.findIndex(
     waypoint => waypoint.id === selectedWaypointId,
   );
+  const topControlsStyle = [
+    styles.topControls,
+    {top: insets.top + 10},
+  ];
 
   useEffect(() => {
     const savedRoute = navigationRoute.params?.savedRoute;
@@ -402,58 +408,70 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         ))}
       </Map>
 
-      <View style={styles.mapTypeToggle}>
-        <Text style={styles.mapTypeLabel}>Satellite ibrida</Text>
-        <Switch
-          accessibilityLabel="Vista satellitare ibrida"
-          value={isSatelliteViewEnabled}
-          trackColor={{false: '#D4D4D8', true: '#059669'}}
-          thumbColor="#FFFFFF"
-          ios_backgroundColor="#D4D4D8"
-          onValueChange={handleSatelliteViewChange}
-        />
-      </View>
+      <View style={topControlsStyle}>
+        <View style={styles.mapHeaderCard}>
+          <View style={styles.mapHeaderIdentity}>
+            <View style={styles.onlineIndicator} />
+            <View>
+              <Text style={styles.mapHeaderTitle}>Pianifica Percorso</Text>
+              <Text style={styles.mapHeaderSubtitle}>Toscana Centrale</Text>
+            </View>
+          </View>
 
-      {routeStats && (
-        <View
-          accessible
-          accessibilityLabel={`Distanza ${formatDistance(
-            routeStats.distanceMeters,
-          )}, dislivello positivo ${formatElevation(
-            routeStats.ascentMeters,
-          )}${
-            routeStats.durationSeconds === null
-              ? ''
-              : `, tempo stimato ${formatDuration(
-                  routeStats.durationSeconds,
-                )}`
-          }`}
-          style={styles.routeStatsCard}
-        >
-          <View style={styles.routeStat}>
-            <Text style={styles.routeStatLabel}>DISTANZA</Text>
-            <Text style={styles.routeStatValue}>
-              {formatDistance(routeStats.distanceMeters)}
-            </Text>
-          </View>
-          <View style={styles.routeStatsDivider} />
-          <View style={styles.routeStat}>
-            <Text style={styles.routeStatLabel}>DISLIVELLO +</Text>
-            <Text style={styles.routeStatValue}>
-              {formatElevation(routeStats.ascentMeters)}
-            </Text>
-          </View>
-          <View style={styles.routeStatsDivider} />
-          <View style={styles.routeStat}>
-            <Text style={styles.routeStatLabel}>TEMPO</Text>
-            <Text style={styles.routeStatValue}>
-              {routeStats.durationSeconds === null
-                ? '—'
-                : formatDuration(routeStats.durationSeconds)}
-            </Text>
+          <View style={styles.mapTypeToggle}>
+            <Text style={styles.mapTypeLabel}>Satellite</Text>
+            <Switch
+              accessibilityLabel="Vista satellitare ibrida"
+              value={isSatelliteViewEnabled}
+              trackColor={{false: '#CBD5E1', true: '#059669'}}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor="#CBD5E1"
+              onValueChange={handleSatelliteViewChange}
+            />
           </View>
         </View>
-      )}
+
+        {routeStats && (
+          <View
+            accessible
+            accessibilityLabel={`Distanza ${formatDistance(
+              routeStats.distanceMeters,
+            )}, dislivello positivo ${formatElevation(
+              routeStats.ascentMeters,
+            )}${
+              routeStats.durationSeconds === null
+                ? ''
+                : `, tempo stimato ${formatDuration(
+                    routeStats.durationSeconds,
+                  )}`
+            }`}
+            style={styles.routeStatsCard}
+          >
+            <View style={styles.routeStat}>
+              <Text style={styles.routeStatLabel}>DISTANZA</Text>
+              <Text style={styles.routeStatValue}>
+                {formatDistance(routeStats.distanceMeters)}
+              </Text>
+            </View>
+            <View style={styles.routeStatsDivider} />
+            <View style={styles.routeStat}>
+              <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
+              <Text style={styles.routeStatValue}>
+                {formatElevation(routeStats.ascentMeters)}
+              </Text>
+            </View>
+            <View style={styles.routeStatsDivider} />
+            <View style={styles.routeStat}>
+              <Text style={styles.routeStatLabel}>TEMPO</Text>
+              <Text style={styles.routeStatValue}>
+                {routeStats.durationSeconds === null
+                  ? '—'
+                  : formatDuration(routeStats.durationSeconds)}
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
 
       {waypoints.length > 0 && (
         <Button

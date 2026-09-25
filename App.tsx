@@ -79,6 +79,7 @@ function App() {
               component={MapScreen}
               options={{
                 title: 'Percorso',
+                headerShown: false,
                 tabBarLabel: 'Mappa',
                 tabBarIcon: MapTabIcon,
               }}
@@ -97,6 +98,7 @@ function App() {
               component={SettingsScreen}
               options={{
                 title: 'Impostazioni',
+                headerShown: false,
                 tabBarIcon: SettingsTabIcon,
               }}
             />

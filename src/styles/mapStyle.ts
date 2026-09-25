@@ -10,51 +10,84 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
 
-  mapTypeToggle: {
+  topControls: {
     position: 'absolute',
-    top: 16,
-    right: 16,
+    left: 14,
+    right: 14,
+    gap: 10,
+  },
+
+  mapHeaderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.95)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  mapHeaderIdentity: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingLeft: 14,
-    paddingRight: 8,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#E4E4E7',
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 4,
+  },
+
+  onlineIndicator: {
+    width: 10,
+    height: 10,
+    borderWidth: 3,
+    borderColor: '#D1FAE5',
+    borderRadius: 5,
+    backgroundColor: '#10B981',
+  },
+
+  mapHeaderTitle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  mapHeaderSubtitle: {
+    marginTop: 1,
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  mapTypeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 
   mapTypeLabel: {
-    color: '#27272A',
-    fontSize: 14,
+    color: '#475569',
+    fontSize: 12,
     fontWeight: '700',
   },
 
   routeStatsCard: {
-    position: 'absolute',
-    top: 76,
-    left: 16,
-    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     borderWidth: 1,
-    borderColor: '#E4E4E7',
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
+    borderColor: 'rgba(226, 232, 240, 0.95)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    shadowColor: '#0F172A',
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   routeStat: {
@@ -63,24 +96,24 @@ export const styles = StyleSheet.create({
   },
 
   routeStatLabel: {
-    color: '#71717A',
-    fontSize: 11,
+    color: '#64748B',
+    fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
 
   routeStatValue: {
     marginTop: 2,
-    color: '#18181B',
-    fontSize: 18,
+    color: '#0F172A',
+    fontSize: 16,
     fontWeight: '800',
   },
 
   routeStatsDivider: {
     width: 1,
-    height: 34,
-    marginHorizontal: 14,
-    backgroundColor: '#E4E4E7',
+    height: 32,
+    marginHorizontal: 8,
+    backgroundColor: '#E2E8F0',
   },
 
   marker: {
