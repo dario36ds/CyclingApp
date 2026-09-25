@@ -3,6 +3,7 @@ import {
   Alert,
   Modal,
   NativeSyntheticEvent,
+  Pressable,
   ScrollView,
   Switch,
   Text,
@@ -23,6 +24,7 @@ import type {
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import Fontisto from 'react-native-vector-icons/Fontisto';
 
 import {ElevationProfile} from '../components/ElevationProfile';
 import {RouteTerrainDetails} from '../components/RouteTerrainDetails';
@@ -55,6 +57,7 @@ type MapPressEvent = NativeSyntheticEvent<{
 type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
 
 const STREET_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const TUSCANY_CENTER: Coordinate = [11.25, 43.77];
 
 const HYBRID_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -106,6 +109,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [isElevationModalVisible, setIsElevationModalVisible] = useState(false);
   const [isTerrainModalVisible, setIsTerrainModalVisible] = useState(false);
+  const [is3DEnabled, setIs3DEnabled] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
   const routeStats = getRouteStats(route);
@@ -117,6 +121,10 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const topControlsStyle = [
     styles.topControls,
     {top: insets.top + 10},
+  ];
+  const quickControlsStyle = [
+    styles.quickControls,
+    {top: insets.top + 172},
   ];
 
   useEffect(() => {
@@ -221,19 +229,19 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       const currentIndex = current.findIndex(
         waypoint => waypoint.id === selectedWaypointId,
       );
-      const targetIndex = currentIndex + offset;
+      const nextIndex = currentIndex + offset;
 
       if (
         currentIndex === -1 ||
-        targetIndex < 0 ||
-        targetIndex >= current.length
+        nextIndex < 0 ||
+        nextIndex >= current.length
       ) {
         return current;
       }
 
       const reorderedWaypoints = [...current];
       const [selectedWaypoint] = reorderedWaypoints.splice(currentIndex, 1);
-      reorderedWaypoints.splice(targetIndex, 0, selectedWaypoint);
+      reorderedWaypoints.splice(nextIndex, 0, selectedWaypoint);
 
       return reorderedWaypoints;
     });
@@ -341,6 +349,66 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     setSatelliteViewEnabled(enabled);
   };
 
+  const getMapFocusCoordinate = (): Coordinate => {
+    if (waypoints.length === 0) {
+      return TUSCANY_CENTER;
+    }
+
+    const [longitudeSum, latitudeSum] = waypoints.reduce(
+      ([longitude, latitude], waypoint) => [
+        longitude + waypoint.coordinate[0],
+        latitude + waypoint.coordinate[1],
+      ],
+      [0, 0],
+    );
+
+    return [
+      longitudeSum / waypoints.length,
+      latitudeSum / waypoints.length,
+    ];
+  };
+
+  const centerMap = () => {
+    triggerHaptic('selection');
+
+    if (waypoints.length < 2) {
+      cameraRef.current?.flyTo({
+        center: getMapFocusCoordinate(),
+        zoom: waypoints.length === 1 ? 12 : 8.4,
+        duration: 600,
+      });
+      return;
+    }
+
+    const longitudes = waypoints.map(({coordinate}) => coordinate[0]);
+    const latitudes = waypoints.map(({coordinate}) => coordinate[1]);
+
+    cameraRef.current?.fitBounds(
+      [
+        Math.min(...longitudes),
+        Math.min(...latitudes),
+        Math.max(...longitudes),
+        Math.max(...latitudes),
+      ],
+      {
+        padding: {top: 180, right: 54, bottom: 280, left: 54},
+        duration: 650,
+      },
+    );
+  };
+
+  const toggle3DView = () => {
+    const enabled = !is3DEnabled;
+
+    triggerHaptic('selection');
+    setIs3DEnabled(enabled);
+    cameraRef.current?.easeTo({
+      center: getMapFocusCoordinate(),
+      pitch: enabled ? 55 : 0,
+      duration: 500,
+    });
+  };
+
   return (
     <View style={styles.container}>
       <Map
@@ -353,8 +421,8 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         <Camera
           ref={cameraRef}
           initialViewState={{
-            center: [12.5674, 41.8719],
-            zoom: 5.5,
+            center: TUSCANY_CENTER,
+            zoom: 8.4,
           }}
         />
 
@@ -396,13 +464,30 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             onDragStart={() => startMovingWaypoint(id)}
             onDragEnd={event => moveWaypoint(id, event.nativeEvent.lngLat)}
           >
-            <View
-              style={[
-                styles.marker,
-                selectedWaypointId === id && styles.selectedMarker,
-              ]}
-            >
-              <Text style={styles.markerText}>{index + 1}</Text>
+            <View style={styles.markerContainer}>
+              <View
+                style={[
+                  styles.marker,
+                  waypoints.length > 1 &&
+                    index === waypoints.length - 1 &&
+                    styles.arrivalMarker,
+                  selectedWaypointId === id && styles.selectedMarker,
+                ]}
+              >
+                <Text style={styles.markerText}>{index + 1}</Text>
+              </View>
+              {(index === 0 || index === waypoints.length - 1) && (
+                <Text
+                  style={[
+                    styles.markerLabel,
+                    index === waypoints.length - 1 &&
+                      waypoints.length > 1 &&
+                      styles.arrivalMarkerLabel,
+                  ]}
+                >
+                  {index === 0 ? 'Partenza' : 'Arrivo'}
+                </Text>
+              )}
             </View>
           </ViewAnnotation>
         ))}
@@ -431,157 +516,223 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           </View>
         </View>
 
-        {routeStats && (
-          <View
-            accessible
-            accessibilityLabel={`Distanza ${formatDistance(
-              routeStats.distanceMeters,
-            )}, dislivello positivo ${formatElevation(
-              routeStats.ascentMeters,
-            )}${
-              routeStats.durationSeconds === null
-                ? ''
-                : `, tempo stimato ${formatDuration(
-                    routeStats.durationSeconds,
-                  )}`
-            }`}
-            style={styles.routeStatsCard}
-          >
-            <View style={styles.routeStat}>
+        <View
+          accessible
+          accessibilityLabel={
+            routeStats
+              ? `Distanza ${formatDistance(
+                  routeStats.distanceMeters,
+                )}, dislivello positivo ${formatElevation(
+                  routeStats.ascentMeters,
+                )}`
+              : 'Statistiche del percorso non ancora disponibili'
+          }
+          style={styles.routeStatsCard}
+        >
+          <View style={styles.routeStat}>
+            <View style={styles.routeStatHeading}>
+              <Fontisto name="map" color="#94A3B8" size={12} />
               <Text style={styles.routeStatLabel}>DISTANZA</Text>
-              <Text style={styles.routeStatValue}>
-                {formatDistance(routeStats.distanceMeters)}
-              </Text>
             </View>
-            <View style={styles.routeStatsDivider} />
-            <View style={styles.routeStat}>
-              <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
-              <Text style={styles.routeStatValue}>
-                {formatElevation(routeStats.ascentMeters)}
-              </Text>
-            </View>
-            <View style={styles.routeStatsDivider} />
-            <View style={styles.routeStat}>
-              <Text style={styles.routeStatLabel}>TEMPO</Text>
-              <Text style={styles.routeStatValue}>
-                {routeStats.durationSeconds === null
-                  ? '—'
-                  : formatDuration(routeStats.durationSeconds)}
-              </Text>
-            </View>
+            <Text style={styles.routeStatValue}>
+              {routeStats
+                ? formatDistance(routeStats.distanceMeters)
+                : '— km'}
+            </Text>
           </View>
-        )}
+          <View style={styles.routeStatsDivider} />
+          <View style={styles.routeStat}>
+            <View style={styles.routeStatHeading}>
+              <Fontisto name="line-chart" color="#059669" size={12} />
+              <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
+            </View>
+            <Text style={styles.routeStatValue}>
+              {routeStats
+                ? formatElevation(routeStats.ascentMeters)
+                : '— m'}
+            </Text>
+          </View>
+          <View style={styles.routeStatsDivider} />
+          <View style={styles.routeStat}>
+            <View style={styles.routeStatHeading}>
+              <Fontisto name="clock" color="#94A3B8" size={12} />
+              <Text style={styles.routeStatLabel}>TEMPO</Text>
+            </View>
+            <Text style={styles.routeStatValue}>
+              {routeStats?.durationSeconds === null || !routeStats
+                ? '—'
+                : formatDuration(routeStats.durationSeconds)}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {waypoints.length > 0 && (
-        <Button
-          variant="outline"
-          size="lg"
-          className="absolute bottom-10 left-5 right-5 h-12 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100"
-          onPress={clearWaypoints}
+      <View style={quickControlsStyle}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Centra la mappa"
+          style={({pressed}) => [
+            styles.quickControlButton,
+            pressed && styles.controlPressed,
+          ]}
+          onPress={centerMap}
         >
-          <ButtonText className="text-base font-bold text-zinc-900">
-            Cancella waypoint
-          </ButtonText>
-        </Button>
-      )}
-
-      {selectedWaypointId !== null && (
-        <View
-          style={[styles.waypointActions, {bottom: route ? 232 : 168}]}
+          <Fontisto name="crosshairs" color="#475569" size={18} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Visuale tridimensionale"
+          style={({pressed}) => [
+            styles.quickControlButton,
+            is3DEnabled && styles.quickControlButtonActive,
+            pressed && styles.controlPressed,
+          ]}
+          onPress={toggle3DView}
         >
-          <Button
-            variant="outline"
-            size="lg"
-            accessibilityLabel="Sposta il waypoint prima"
-            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
-            isDisabled={selectedWaypointIndex <= 0}
-            onPress={() => reorderSelectedWaypoint(-1)}
+          <Text
+            style={[
+              styles.quickControlText,
+              is3DEnabled && styles.quickControlTextActive,
+            ]}
           >
-            <ButtonText className="text-base font-bold text-zinc-900">
-              Prima
-            </ButtonText>
-          </Button>
-          <Button
-            variant="destructive"
-            size="lg"
-            accessibilityLabel="Elimina il waypoint selezionato"
-            className="h-12 flex-1 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
-            onPress={() => removeWaypoint(selectedWaypointId)}
-          >
-            <ButtonText className="text-base font-bold text-white">
-              Elimina
-            </ButtonText>
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            accessibilityLabel="Sposta il waypoint dopo"
-            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
-            isDisabled={
-              selectedWaypointIndex === -1 ||
-              selectedWaypointIndex === waypoints.length - 1
-            }
-            onPress={() => reorderSelectedWaypoint(1)}
-          >
-            <ButtonText className="text-base font-bold text-zinc-900">
-              Dopo
-            </ButtonText>
-          </Button>
-        </View>
-      )}
+            3D
+          </Text>
+        </Pressable>
+      </View>
 
-      {route && (
-        <View style={styles.routeActions}>
-          <Button
-            variant="outline"
-            size="lg"
-            accessibilityLabel="Apri il profilo altimetrico"
-            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
-            isDisabled={!elevationProfile}
-            onPress={openElevationProfile}
-          >
-            <ButtonText className="text-sm font-bold text-zinc-900">
-              Altimetria
-            </ButtonText>
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            accessibilityLabel="Apri i tipi di terreno del percorso"
-            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
-            isDisabled={!terrainDetails}
-            onPress={openTerrainDetails}
-          >
-            <ButtonText className="text-sm font-bold text-zinc-900">
-              Terreno
-            </ButtonText>
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            className="h-12 flex-1 rounded-2xl bg-sky-700 shadow-lg data-[active=true]:bg-sky-800"
-            isDisabled={isSavingRoute}
-            onPress={openSaveRouteModal}
-          >
-            <ButtonText className="text-sm font-bold text-white">
-              {isSavingRoute ? 'Salvo...' : 'Salva'}
-            </ButtonText>
-          </Button>
-        </View>
-      )}
+      <View style={styles.actionSheet}>
+          <View style={styles.sheetHandle} />
 
-      {waypoints.length >= 2 && (
-        <Button
-          size="lg"
-          className="absolute bottom-[104px] left-5 right-5 h-12 rounded-2xl bg-emerald-600 shadow-lg data-[active=true]:bg-emerald-700"
-          onPress={handleCalculateRoute}
-        >
-          <ButtonText className="text-base font-bold text-white">
-            Calcola percorso
-          </ButtonText>
-        </Button>
-      )}
+          <View style={styles.sheetButtonRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sposta il waypoint prima"
+                disabled={
+                  selectedWaypointId === null || selectedWaypointIndex <= 0
+                }
+                style={[
+                  styles.sheetSecondaryButton,
+                  (selectedWaypointId === null ||
+                    selectedWaypointIndex <= 0) &&
+                    styles.controlDisabled,
+                ]}
+                onPress={() => reorderSelectedWaypoint(-1)}
+              >
+                <Fontisto name="angle-left" color="#334155" size={14} />
+                <Text style={styles.sheetSecondaryText}>Prima</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Elimina il waypoint selezionato"
+                disabled={selectedWaypointId === null}
+                style={[
+                  styles.sheetDeleteButton,
+                  selectedWaypointId === null && styles.controlDisabled,
+                ]}
+                onPress={() => {
+                  if (selectedWaypointId !== null) {
+                    removeWaypoint(selectedWaypointId);
+                  }
+                }}
+              >
+                <Fontisto name="trash" color="#E11D48" size={14} />
+                <Text style={styles.sheetDeleteText}>Elimina</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sposta il waypoint dopo"
+                disabled={
+                  selectedWaypointId === null ||
+                  selectedWaypointIndex === -1 ||
+                  selectedWaypointIndex === waypoints.length - 1
+                }
+                style={[
+                  styles.sheetSecondaryButton,
+                  (selectedWaypointId === null ||
+                    selectedWaypointIndex === -1 ||
+                    selectedWaypointIndex === waypoints.length - 1) &&
+                    styles.controlDisabled,
+                ]}
+                onPress={() => reorderSelectedWaypoint(1)}
+              >
+                <Text style={styles.sheetSecondaryText}>Dopo</Text>
+                <Fontisto name="angle-right" color="#334155" size={14} />
+              </Pressable>
+          </View>
+
+          <View style={styles.sheetButtonRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Apri il profilo altimetrico"
+                disabled={!route || !elevationProfile}
+                style={[
+                  styles.sheetOutlineButton,
+                  (!route || !elevationProfile) && styles.controlDisabled,
+                ]}
+                onPress={openElevationProfile}
+              >
+                <Fontisto name="line-chart" color="#64748B" size={14} />
+                <Text style={styles.sheetOutlineText}>Altimetria</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Apri i tipi di terreno del percorso"
+                disabled={!route || !terrainDetails}
+                style={[
+                  styles.sheetOutlineButton,
+                  (!route || !terrainDetails) && styles.controlDisabled,
+                ]}
+                onPress={openTerrainDetails}
+              >
+                <Fontisto name="curve" color="#64748B" size={14} />
+                <Text style={styles.sheetOutlineText}>Terreno</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Salva il percorso"
+                disabled={!route || isSavingRoute}
+                style={[
+                  styles.sheetSaveButton,
+                  (!route || isSavingRoute) && styles.controlDisabled,
+                ]}
+                onPress={openSaveRouteModal}
+              >
+                <Fontisto name="save" color="#0284C7" size={14} />
+                <Text style={styles.sheetSaveText}>
+                  {isSavingRoute ? 'Salvo...' : 'Salva'}
+                </Text>
+              </Pressable>
+          </View>
+
+          <Pressable
+              accessibilityRole="button"
+              disabled={waypoints.length < 2}
+              style={[
+                styles.calculateButton,
+                waypoints.length < 2 && styles.calculateButtonDisabled,
+              ]}
+              onPress={handleCalculateRoute}
+            >
+              <Fontisto name="map" color="#FFFFFF" size={17} />
+              <Text style={styles.calculateButtonText}>Calcola percorso</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={waypoints.length === 0}
+            style={[
+              styles.clearButton,
+              waypoints.length === 0 && styles.controlDisabled,
+            ]}
+            onPress={clearWaypoints}
+          >
+            <Text style={styles.clearButtonText}>
+              Cancella tutti i waypoint
+            </Text>
+          </Pressable>
+      </View>
 
       <Modal
         animationType="slide"
