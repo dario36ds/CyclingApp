@@ -105,6 +105,14 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  waypointActions: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    gap: 10,
+  },
+
   modalBackdrop: {
     flex: 1,
     justifyContent: 'center',

@@ -99,6 +99,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
   const routeStats = getRouteStats(route);
+  const selectedWaypointIndex = waypoints.findIndex(
+    waypoint => waypoint.id === selectedWaypointId,
+  );
 
   useEffect(() => {
     const savedRoute = navigationRoute.params?.savedRoute;
@@ -183,6 +186,43 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     triggerHaptic('notificationWarning');
     setWaypoints(current => current.filter(({id}) => id !== idToRemove));
     setSelectedWaypointId(null);
+    setRoute(null);
+  };
+
+  const reorderSelectedWaypoint = (offset: -1 | 1) => {
+    const targetIndex = selectedWaypointIndex + offset;
+
+    if (
+      selectedWaypointId === null ||
+      selectedWaypointIndex === -1 ||
+      targetIndex < 0 ||
+      targetIndex >= waypoints.length
+    ) {
+      return;
+    }
+
+    setWaypoints(current => {
+      const currentIndex = current.findIndex(
+        waypoint => waypoint.id === selectedWaypointId,
+      );
+      const targetIndex = currentIndex + offset;
+
+      if (
+        currentIndex === -1 ||
+        targetIndex < 0 ||
+        targetIndex >= current.length
+      ) {
+        return current;
+      }
+
+      const reorderedWaypoints = [...current];
+      const [selectedWaypoint] = reorderedWaypoints.splice(currentIndex, 1);
+      reorderedWaypoints.splice(targetIndex, 0, selectedWaypoint);
+
+      return reorderedWaypoints;
+    });
+
+    triggerHaptic('impactLight');
     setRoute(null);
   };
 
@@ -376,17 +416,48 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       )}
 
       {selectedWaypointId !== null && (
-        <Button
-          variant="destructive"
-          size="lg"
-          className="absolute left-5 right-5 h-12 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
-          style={{bottom: route ? 232 : 168}}
-          onPress={() => removeWaypoint(selectedWaypointId)}
+        <View
+          style={[styles.waypointActions, {bottom: route ? 232 : 168}]}
         >
-          <ButtonText className="text-base font-bold text-white">
-            Elimina waypoint selezionato
-          </ButtonText>
-        </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            accessibilityLabel="Sposta il waypoint prima"
+            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
+            isDisabled={selectedWaypointIndex <= 0}
+            onPress={() => reorderSelectedWaypoint(-1)}
+          >
+            <ButtonText className="text-base font-bold text-zinc-900">
+              Prima
+            </ButtonText>
+          </Button>
+          <Button
+            variant="destructive"
+            size="lg"
+            accessibilityLabel="Elimina il waypoint selezionato"
+            className="h-12 flex-1 rounded-2xl bg-red-600 shadow-lg data-[active=true]:bg-red-700"
+            onPress={() => removeWaypoint(selectedWaypointId)}
+          >
+            <ButtonText className="text-base font-bold text-white">
+              Elimina
+            </ButtonText>
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            accessibilityLabel="Sposta il waypoint dopo"
+            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
+            isDisabled={
+              selectedWaypointIndex === -1 ||
+              selectedWaypointIndex === waypoints.length - 1
+            }
+            onPress={() => reorderSelectedWaypoint(1)}
+          >
+            <ButtonText className="text-base font-bold text-zinc-900">
+              Dopo
+            </ButtonText>
+          </Button>
+        </View>
       )}
 
       {route && (
