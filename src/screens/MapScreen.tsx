@@ -14,11 +14,14 @@ import {
   Camera,
   GeoJSONSource,
   Layer,
+  LocationManager,
   Map,
+  UserLocation,
   ViewAnnotation,
 } from '@maplibre/maplibre-react-native';
 import type {
   CameraRef,
+  GeolocationPosition,
   LngLatBounds,
   StyleSpecification,
 } from '@maplibre/maplibre-react-native';
@@ -58,6 +61,7 @@ type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
 
 const STREET_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const TUSCANY_CENTER: Coordinate = [11.25, 43.77];
+const LOCATION_TIMEOUT_MS = 12_000;
 
 const HYBRID_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -94,6 +98,27 @@ const HYBRID_MAP_STYLE: StyleSpecification = {
   ],
 };
 
+function getCurrentDevicePosition() {
+  return new Promise<GeolocationPosition | undefined>(resolve => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const onLocationUpdate = (position: GeolocationPosition) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      LocationManager.removeListener(onLocationUpdate);
+      resolve(position);
+    };
+
+    timeoutId = setTimeout(() => {
+      LocationManager.removeListener(onLocationUpdate);
+      resolve(undefined);
+    }, LOCATION_TIMEOUT_MS);
+
+    LocationManager.addListener(onLocationUpdate);
+  });
+}
+
 export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) {
   const cameraRef = useRef<CameraRef>(null);
   const insets = useSafeAreaInsets();
@@ -110,6 +135,8 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [isElevationModalVisible, setIsElevationModalVisible] = useState(false);
   const [isTerrainModalVisible, setIsTerrainModalVisible] = useState(false);
   const [is3DEnabled, setIs3DEnabled] = useState(false);
+  const [isCenteringOnLocation, setIsCenteringOnLocation] = useState(false);
+  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
   const routeStats = getRouteStats(route);
@@ -368,33 +395,54 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     ];
   };
 
-  const centerMap = () => {
+  const centerMap = async () => {
     triggerHaptic('selection');
 
-    if (waypoints.length < 2) {
-      cameraRef.current?.flyTo({
-        center: getMapFocusCoordinate(),
-        zoom: waypoints.length === 1 ? 12 : 8.4,
-        duration: 600,
-      });
+    if (isCenteringOnLocation) {
       return;
     }
 
-    const longitudes = waypoints.map(({coordinate}) => coordinate[0]);
-    const latitudes = waypoints.map(({coordinate}) => coordinate[1]);
+    setIsCenteringOnLocation(true);
 
-    cameraRef.current?.fitBounds(
-      [
-        Math.min(...longitudes),
-        Math.min(...latitudes),
-        Math.max(...longitudes),
-        Math.max(...latitudes),
-      ],
-      {
-        padding: {top: 180, right: 54, bottom: 280, left: 54},
-        duration: 650,
-      },
-    );
+    try {
+      const hasPermission = await LocationManager.requestPermissions();
+
+      if (!hasPermission) {
+        Alert.alert(
+          'Posizione non disponibile',
+          'Consenti l’accesso alla posizione dalle impostazioni del dispositivo per centrare la mappa.',
+        );
+        return;
+      }
+
+      LocationManager.setMinDisplacement(5);
+      const currentPosition = await getCurrentDevicePosition();
+
+      if (!currentPosition) {
+        Alert.alert(
+          'Posizione non disponibile',
+          'Non è stato possibile rilevare la tua posizione. Verifica che il GPS sia attivo e riprova.',
+        );
+        return;
+      }
+
+      setIsLocationEnabled(true);
+      cameraRef.current?.flyTo({
+        center: [
+          currentPosition.coords.longitude,
+          currentPosition.coords.latitude,
+        ],
+        zoom: 15,
+        duration: 700,
+      });
+    } catch {
+      Alert.alert(
+        'Posizione non disponibile',
+        'Non è stato possibile avviare il GPS. Verifica i permessi e riprova.',
+      );
+    } finally {
+      setIsCenteringOnLocation(false);
+    }
   };
 
   const toggle3DView = () => {
@@ -425,6 +473,10 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             zoom: 8.4,
           }}
         />
+
+        {isLocationEnabled && (
+          <UserLocation animated accuracy heading minDisplacement={5} />
+        )}
 
         {route && (
           <GeoJSONSource id="routeSource" data={route}>
@@ -570,9 +622,12 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Centra la mappa"
+          accessibilityState={{disabled: isCenteringOnLocation}}
+          disabled={isCenteringOnLocation}
           style={({pressed}) => [
             styles.quickControlButton,
             pressed && styles.controlPressed,
+            isCenteringOnLocation && styles.controlDisabled,
           ]}
           onPress={centerMap}
         >
