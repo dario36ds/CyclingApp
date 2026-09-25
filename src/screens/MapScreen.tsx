@@ -21,6 +21,7 @@ import type {
   StyleSpecification,
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
+import {trigger} from 'react-native-haptic-feedback';
 
 import {Button, ButtonText} from '../components/ui/button';
 import {useMapPreferences} from '../context/MapPreferencesContext';
@@ -188,6 +189,16 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     setRoute(null);
   };
 
+  const selectWaypoint = (id: number) => {
+    trigger('selection');
+    setSelectedWaypointId(id);
+  };
+
+  const startMovingWaypoint = (id: number) => {
+    trigger('impactMedium');
+    setSelectedWaypointId(id);
+  };
+
   const openSaveRouteModal = () => {
     setRouteName('');
     setIsSaveModalVisible(true);
@@ -282,9 +293,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             draggable
             onPress={event => {
               event.stopPropagation();
-              setSelectedWaypointId(id);
+              selectWaypoint(id);
             }}
-            onDragStart={() => setSelectedWaypointId(id)}
+            onDragStart={() => startMovingWaypoint(id)}
             onDragEnd={event => moveWaypoint(id, event.nativeEvent.lngLat)}
           >
             <View
