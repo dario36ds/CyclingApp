@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
-import Fontisto from 'react-native-vector-icons/Fontisto';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type TabBarIconProps = {
   color: string;
@@ -10,13 +10,19 @@ type TabBarIconProps = {
 
 export function TabBarIcon({color, name, size}: TabBarIconProps) {
   if (name === 'map') {
-    return <Fontisto name="map" color={color} size={size} />;
+    return <MaterialCommunityIcons name="map" color={color} size={size} />;
   }
   if (name === 'saved') {
-    return <Fontisto name="save" color={color} size={size}/>;
+    return (
+      <MaterialCommunityIcons
+        name="content-save-outline"
+        color={color}
+        size={size}
+      />
+    );
   }
   if (name === 'settings') {
-    return <Fontisto name="spinner-cog" color={color} size={size}/>;
+    return <MaterialCommunityIcons name="cog-outline" color={color} size={size} />;
   }
 
   // Placeholder temporanei: sostituire con le icone definitive.

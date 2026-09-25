@@ -41,7 +41,7 @@
 	<string>LaunchScreen</string>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Fontisto.ttf</string>
+		<string>MaterialCommunityIcons.ttf</string>
 	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>

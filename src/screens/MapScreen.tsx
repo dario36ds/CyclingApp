@@ -24,7 +24,7 @@ import type {
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import Fontisto from 'react-native-vector-icons/Fontisto';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {ElevationProfile} from '../components/ElevationProfile';
 import {RouteTerrainDetails} from '../components/RouteTerrainDetails';
@@ -499,7 +499,6 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             <View style={styles.onlineIndicator} />
             <View>
               <Text style={styles.mapHeaderTitle}>Pianifica Percorso</Text>
-              <Text style={styles.mapHeaderSubtitle}>Toscana Centrale</Text>
             </View>
           </View>
 
@@ -531,7 +530,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         >
           <View style={styles.routeStat}>
             <View style={styles.routeStatHeading}>
-              <Fontisto name="map" color="#94A3B8" size={12} />
+              <MaterialCommunityIcons name="map" color="#94A3B8" size={12} />
               <Text style={styles.routeStatLabel}>DISTANZA</Text>
             </View>
             <Text style={styles.routeStatValue}>
@@ -543,7 +542,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           <View style={styles.routeStatsDivider} />
           <View style={styles.routeStat}>
             <View style={styles.routeStatHeading}>
-              <Fontisto name="line-chart" color="#059669" size={12} />
+              <MaterialCommunityIcons name="chart-line" color="#059669" size={12} />
               <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
             </View>
             <Text style={styles.routeStatValue}>
@@ -555,7 +554,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           <View style={styles.routeStatsDivider} />
           <View style={styles.routeStat}>
             <View style={styles.routeStatHeading}>
-              <Fontisto name="clock" color="#94A3B8" size={12} />
+              <MaterialCommunityIcons name="clock-outline" color="#94A3B8" size={12} />
               <Text style={styles.routeStatLabel}>TEMPO</Text>
             </View>
             <Text style={styles.routeStatValue}>
@@ -577,7 +576,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           ]}
           onPress={centerMap}
         >
-          <Fontisto name="crosshairs" color="#475569" size={18} />
+          <MaterialCommunityIcons
+            name="crosshairs-gps"
+            color="#0F172A"
+            size={20}
+          />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -618,7 +621,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 ]}
                 onPress={() => reorderSelectedWaypoint(-1)}
               >
-                <Fontisto name="angle-left" color="#334155" size={14} />
+                <MaterialCommunityIcons name="chevron-left" color="#334155" size={14} />
                 <Text style={styles.sheetSecondaryText}>Prima</Text>
               </Pressable>
 
@@ -636,7 +639,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                   }
                 }}
               >
-                <Fontisto name="trash" color="#E11D48" size={14} />
+                <MaterialCommunityIcons name="delete-outline" color="#E11D48" size={14} />
                 <Text style={styles.sheetDeleteText}>Elimina</Text>
               </Pressable>
 
@@ -658,7 +661,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 onPress={() => reorderSelectedWaypoint(1)}
               >
                 <Text style={styles.sheetSecondaryText}>Dopo</Text>
-                <Fontisto name="angle-right" color="#334155" size={14} />
+                <MaterialCommunityIcons name="chevron-right" color="#334155" size={14} />
               </Pressable>
           </View>
 
@@ -673,7 +676,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 ]}
                 onPress={openElevationProfile}
               >
-                <Fontisto name="line-chart" color="#64748B" size={14} />
+                <MaterialCommunityIcons name="chart-line" color="#64748B" size={14} />
                 <Text style={styles.sheetOutlineText}>Altimetria</Text>
               </Pressable>
               <Pressable
@@ -686,7 +689,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 ]}
                 onPress={openTerrainDetails}
               >
-                <Fontisto name="curve" color="#64748B" size={14} />
+                <MaterialCommunityIcons
+                  name="chart-bell-curve-cumulative"
+                  color="#64748B"
+                  size={14}
+                />
                 <Text style={styles.sheetOutlineText}>Terreno</Text>
               </Pressable>
               <Pressable
@@ -699,7 +706,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 ]}
                 onPress={openSaveRouteModal}
               >
-                <Fontisto name="save" color="#0284C7" size={14} />
+                <MaterialCommunityIcons
+                  name="content-save-outline"
+                  color="#0284C7"
+                  size={14}
+                />
                 <Text style={styles.sheetSaveText}>
                   {isSavingRoute ? 'Salvo...' : 'Salva'}
                 </Text>
@@ -715,7 +726,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
               ]}
               onPress={handleCalculateRoute}
             >
-              <Fontisto name="map" color="#FFFFFF" size={17} />
+              <MaterialCommunityIcons name="map" color="#FFFFFF" size={17} />
               <Text style={styles.calculateButtonText}>Calcola percorso</Text>
           </Pressable>
 

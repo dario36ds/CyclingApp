@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import Fontisto from 'react-native-vector-icons/Fontisto';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
@@ -17,7 +17,7 @@ type SettingIconProps = {
   backgroundColor: string;
   borderColor: string;
   color: string;
-  name: React.ComponentProps<typeof Fontisto>['name'];
+  name: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 };
 
 function SettingIcon({
@@ -28,7 +28,7 @@ function SettingIcon({
 }: SettingIconProps) {
   return (
     <View style={[styles.iconBox, {backgroundColor, borderColor}]}>
-      <Fontisto name={name} color={color} size={19} />
+      <MaterialCommunityIcons name={name} color={color} size={19} />
     </View>
   );
 }
@@ -64,7 +64,7 @@ export function SettingsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Impostazioni</Text>
         <View style={styles.headerIcon}>
-          <Fontisto name="equalizer" color="#64748B" size={17} />
+          <MaterialCommunityIcons name="tune-variant" color="#64748B" size={17} />
         </View>
       </View>
 
@@ -109,7 +109,7 @@ export function SettingsScreen() {
           <View style={styles.card}>
             <View style={styles.settingRowTop}>
               <SettingIcon
-                name="mobile"
+                name="cellphone"
                 color="#059669"
                 backgroundColor="#ECFDF5"
                 borderColor="#D1FAE5"
@@ -135,7 +135,7 @@ export function SettingsScreen() {
 
             <View style={styles.settingRowCenter}>
               <SettingIcon
-                name="arrow-h"
+                name="arrow-left-right"
                 color="#D97706"
                 backgroundColor="#FFFBEB"
                 borderColor="#FEF3C7"
@@ -198,7 +198,7 @@ export function SettingsScreen() {
           <View style={styles.card}>
             <View style={styles.settingRowCenter}>
               <SettingIcon
-                name="world-o"
+                name="web"
                 color="#9333EA"
                 backgroundColor="#FAF5FF"
                 borderColor="#F3E8FF"
@@ -211,14 +211,18 @@ export function SettingsScreen() {
                   MapLibre GL • OpenStreetMap
                 </Text>
               </View>
-              <Fontisto name="export" color="#94A3B8" size={17} />
+              <MaterialCommunityIcons
+                name="export-variant"
+                color="#94A3B8"
+                size={17}
+              />
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.settingRowCenter}>
               <SettingIcon
-                name="shield"
+                name="shield-outline"
                 color="#475569"
                 backgroundColor="#F1F5F9"
                 borderColor="#E2E8F0"

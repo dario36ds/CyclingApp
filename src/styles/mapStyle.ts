@@ -189,29 +189,29 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#0F172A',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.12,
-    shadowRadius: 5,
-    elevation: 4,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.28,
+    shadowRadius: 7,
+    elevation: 7,
   },
 
   quickControlText: {
-    color: '#334155',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '800',
   },
 
   quickControlButtonActive: {
-    borderColor: '#A7F3D0',
-    backgroundColor: '#ECFDF5',
+    borderColor: '#D1FAE5',
+    backgroundColor: '#059669',
   },
 
   quickControlTextActive: {
-    color: '#047857',
+    color: '#FFFFFF',
   },
 
   actionSheet: {
