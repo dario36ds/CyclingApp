@@ -1,11 +1,22 @@
 import React from 'react';
 import {StyleSheet, Switch, Text, View} from 'react-native';
 
+import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
 
 export function SettingsScreen() {
   const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
     useMapPreferences();
+  const {
+    isHapticFeedbackEnabled,
+    setHapticFeedbackEnabled,
+    triggerHaptic,
+  } = useHapticFeedback();
+
+  const handleSatelliteViewChange = (enabled: boolean) => {
+    triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
+    setSatelliteViewEnabled(enabled);
+  };
 
   return (
     <View style={styles.container}>
@@ -23,7 +34,27 @@ export function SettingsScreen() {
           trackColor={{false: '#D4D4D8', true: '#059669'}}
           thumbColor="#FFFFFF"
           ios_backgroundColor="#D4D4D8"
-          onValueChange={setSatelliteViewEnabled}
+          onValueChange={handleSatelliteViewChange}
+        />
+      </View>
+
+      <Text style={[styles.sectionTitle, styles.spacedSectionTitle]}>
+        Interazioni
+      </Text>
+      <View style={styles.settingCard}>
+        <View style={styles.settingText}>
+          <Text style={styles.settingTitle}>Feedback aptico</Text>
+          <Text style={styles.description}>
+            Riproduce una risposta tattile durante le azioni principali.
+          </Text>
+        </View>
+        <Switch
+          accessibilityLabel="Feedback aptico"
+          value={isHapticFeedbackEnabled}
+          trackColor={{false: '#D4D4D8', true: '#059669'}}
+          thumbColor="#FFFFFF"
+          ios_backgroundColor="#D4D4D8"
+          onValueChange={setHapticFeedbackEnabled}
         />
       </View>
     </View>
@@ -40,6 +71,9 @@ const styles = StyleSheet.create({
     color: '#18181B',
     fontSize: 18,
     fontWeight: '700',
+  },
+  spacedSectionTitle: {
+    marginTop: 24,
   },
   settingCard: {
     flexDirection: 'row',

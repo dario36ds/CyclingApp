@@ -1,9 +1,11 @@
 import React from 'react';
+import type {PropsWithChildren} from 'react';
 import {Text} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import {GluestackUIProvider} from '@/src/components/ui/gluestack-ui-provider';
+import {HapticFeedbackProvider} from './src/context/HapticFeedbackContext';
 import {MapPreferencesProvider} from './src/context/MapPreferencesContext';
 import type {RootTabParamList} from './src/navigation/types';
 import {MapScreen} from './src/screens/MapScreen';
@@ -30,10 +32,18 @@ function SettingsTabIcon({color, size}: TabIconProps) {
   return <Text style={{color, fontSize: size}}>⚙</Text>;
 }
 
+function AppProviders({children}: PropsWithChildren) {
+  return (
+    <MapPreferencesProvider>
+      <HapticFeedbackProvider>{children}</HapticFeedbackProvider>
+    </MapPreferencesProvider>
+  );
+}
+
 function App() {
   return (
     <GluestackUIProvider mode="light">
-      <MapPreferencesProvider>
+      <AppProviders>
         <NavigationContainer>
           <Tab.Navigator
             screenOptions={{
@@ -77,7 +87,7 @@ function App() {
             />
           </Tab.Navigator>
         </NavigationContainer>
-      </MapPreferencesProvider>
+      </AppProviders>
     </GluestackUIProvider>
   );
 }

@@ -21,9 +21,9 @@ import type {
   StyleSpecification,
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
-import {trigger} from 'react-native-haptic-feedback';
 
 import {Button, ButtonText} from '../components/ui/button';
+import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
 import type {RootTabParamList} from '../navigation/types';
 import {calculateRoute} from '../services/openRouteService';
@@ -88,6 +88,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const cameraRef = useRef<CameraRef>(null);
   const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
     useMapPreferences();
+  const {triggerHaptic} = useHapticFeedback();
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [nextWaypointId, setNextWaypointId] = useState(0);
   const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
@@ -141,6 +142,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   }, [navigation, navigationRoute.params?.savedRoute]);
 
   const handleMapPress = (event: MapPressEvent) => {
+    triggerHaptic('impactLight');
     const [lng, lat] = event.nativeEvent.lngLat;
     const newWaypoint: Waypoint = {
       id: nextWaypointId,
@@ -154,6 +156,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   };
 
   const clearWaypoints = () => {
+    triggerHaptic('impactMedium');
     setWaypoints([]);
     setSelectedWaypointId(null);
     setRoute(null);
@@ -169,12 +172,15 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         waypoints.map(waypoint => waypoint.coordinate),
       );
       setRoute(routeData);
+      triggerHaptic('notificationSuccess');
     } catch (error) {
+      triggerHaptic('notificationError');
       console.error('Errore durante il calcolo del percorso:', error);
     }
   };
 
   const removeWaypoint = (idToRemove: number) => {
+    triggerHaptic('notificationWarning');
     setWaypoints(current => current.filter(({id}) => id !== idToRemove));
     setSelectedWaypointId(null);
     setRoute(null);
@@ -190,16 +196,17 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   };
 
   const selectWaypoint = (id: number) => {
-    trigger('selection');
+    triggerHaptic('selection');
     setSelectedWaypointId(id);
   };
 
   const startMovingWaypoint = (id: number) => {
-    trigger('impactMedium');
+    triggerHaptic('impactMedium');
     setSelectedWaypointId(id);
   };
 
   const openSaveRouteModal = () => {
+    triggerHaptic('selection');
     setRouteName('');
     setIsSaveModalVisible(true);
   };
@@ -226,11 +233,13 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         geoJson: route,
       });
       setIsSaveModalVisible(false);
+      triggerHaptic('notificationSuccess');
       Alert.alert(
         'Percorso salvato',
         `Il percorso “${trimmedRouteName}” è stato salvato sul dispositivo.`,
       );
     } catch (error: unknown) {
+      triggerHaptic('notificationError');
       const errorMessage =
         error instanceof Error ? error.message : 'Errore sconosciuto.';
 
@@ -241,6 +250,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     } finally {
       setIsSavingRoute(false);
     }
+  };
+
+  const handleSatelliteViewChange = (enabled: boolean) => {
+    triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
+    setSatelliteViewEnabled(enabled);
   };
 
   return (
@@ -318,7 +332,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           trackColor={{false: '#D4D4D8', true: '#059669'}}
           thumbColor="#FFFFFF"
           ios_backgroundColor="#D4D4D8"
-          onValueChange={setSatelliteViewEnabled}
+          onValueChange={handleSatelliteViewChange}
         />
       </View>
 

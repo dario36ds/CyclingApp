@@ -12,6 +12,7 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
+import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import type {RootTabParamList} from '../navigation/types';
 import {
   deleteSavedRoute,
@@ -38,6 +39,7 @@ type SavedRoutesScreenProps = BottomTabScreenProps<
 >;
 
 export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
+  const {triggerHaptic} = useHapticFeedback();
   const [routes, setRoutes] = useState<SavedRoute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -80,6 +82,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
   );
 
   const confirmDeleteRoute = (routeToDelete: SavedRoute) => {
+    triggerHaptic('notificationWarning');
     Alert.alert(
       'Elimina percorso',
       `Vuoi eliminare “${routeToDelete.name}”? Questa azione non può essere annullata.`,
@@ -96,7 +99,9 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
               setRoutes(currentRoutes =>
                 currentRoutes.filter(route => route.id !== routeToDelete.id),
               );
+              triggerHaptic('notificationSuccess');
             } catch (error: unknown) {
+              triggerHaptic('notificationError');
               const message =
                 error instanceof Error
                   ? error.message
@@ -113,6 +118,11 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
         },
       ],
     );
+  };
+
+  const openRoute = (routeToOpen: SavedRoute) => {
+    triggerHaptic('selection');
+    navigation.navigate('Map', {savedRoute: routeToOpen});
   };
 
   if (isLoading) {
@@ -147,7 +157,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
             accessibilityLabel={`Apri il percorso ${item.name}`}
             accessibilityHint="Mostra il percorso sulla mappa"
             style={({pressed}) => pressed && styles.cardPressed}
-            onPress={() => navigation.navigate('Map', {savedRoute: item})}
+            onPress={() => openRoute(item)}
           >
             <View style={styles.cardHeader}>
               <View style={styles.routeIcon}>
