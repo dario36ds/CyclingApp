@@ -10,6 +10,16 @@ type RouteSegment = {
   duration?: number;
 };
 
+type RouteExtraSummaryItem = {
+  value?: number;
+  distance?: number;
+  amount?: number;
+};
+
+type RouteExtra = {
+  summary?: RouteExtraSummaryItem[];
+};
+
 type RouteFeature = {
   geometry?: {
     coordinates?: number[][];
@@ -17,6 +27,9 @@ type RouteFeature = {
   properties?: {
     summary?: RouteSummary;
     segments?: RouteSegment[];
+    extras?: {
+      surface?: RouteExtra;
+    };
   };
 };
 
@@ -41,6 +54,25 @@ export type ElevationProfileData = {
   minElevationMeters: number;
   maxElevationMeters: number;
 };
+
+export type RouteBreakdownItem = {
+  value: number;
+  label: string;
+  distanceMeters: number;
+  percentage: number;
+};
+
+export type RouteTerrainDetails = {
+  surfaces: RouteBreakdownItem[];
+};
+
+const SURFACE_CATEGORIES: Record<number, string> = {
+  0: 'Non classificato',
+  1: 'Asfalto',
+  2: 'Sterrato',
+};
+
+const PAVED_SURFACE_VALUES = new Set([1, 3, 4, 5, 6, 7, 14]);
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
@@ -213,6 +245,81 @@ export function getElevationProfile(
     distanceMeters: scaledPoints[scaledPoints.length - 1].distanceMeters,
     minElevationMeters: elevationBounds.min,
     maxElevationMeters: elevationBounds.max,
+  };
+}
+
+function getSurfaceCategory(value: number) {
+  if (value === 0) {
+    return 0;
+  }
+
+  if (PAVED_SURFACE_VALUES.has(value)) {
+    return 1;
+  }
+
+  if (value >= 2 && value <= 18) {
+    return 2;
+  }
+
+  return 0;
+}
+
+function getSimplifiedSurfaces(summary: RouteExtraSummaryItem[] | undefined) {
+  const categories = new Map<number, RouteBreakdownItem>();
+
+  (summary ?? []).forEach(item => {
+    if (
+      typeof item.value !== 'number' ||
+      typeof item.distance !== 'number' ||
+      typeof item.amount !== 'number' ||
+      !Number.isFinite(item.value) ||
+      !Number.isFinite(item.distance) ||
+      !Number.isFinite(item.amount)
+    ) {
+      return;
+    }
+
+    const category = getSurfaceCategory(Math.round(item.value));
+    const current = categories.get(category);
+
+    categories.set(category, {
+      value: category,
+      label: SURFACE_CATEGORIES[category],
+      distanceMeters:
+        (current?.distanceMeters ?? 0) + Math.max(0, item.distance),
+      percentage: Math.min(
+        100,
+        (current?.percentage ?? 0) + Math.max(0, item.amount),
+      ),
+    });
+  });
+
+  return [1, 2, 0]
+    .map(category => categories.get(category))
+    .filter((item): item is RouteBreakdownItem => Boolean(item));
+}
+
+export function getRouteTerrainDetails(
+  route: unknown,
+): RouteTerrainDetails | null {
+  if (!route || typeof route !== 'object') {
+    return null;
+  }
+
+  const extras = (route as RouteGeoJson).features?.[0]?.properties?.extras;
+
+  if (!extras?.surface) {
+    return null;
+  }
+
+  const surfaces = getSimplifiedSurfaces(extras.surface.summary);
+
+  if (surfaces.length === 0) {
+    return null;
+  }
+
+  return {
+    surfaces,
   };
 }
 

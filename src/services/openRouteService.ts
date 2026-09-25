@@ -20,6 +20,7 @@ export async function calculateRoute(coordinates: Coordinate[]) {
     body: JSON.stringify({
       coordinates,
       elevation: true,
+      extra_info: ['surface'],
     }),
   });
 

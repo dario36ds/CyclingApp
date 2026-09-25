@@ -3,6 +3,7 @@ import {
   Alert,
   Modal,
   NativeSyntheticEvent,
+  ScrollView,
   Switch,
   Text,
   TextInput,
@@ -23,6 +24,7 @@ import type {
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
 import {ElevationProfile} from '../components/ElevationProfile';
+import {RouteTerrainDetails} from '../components/RouteTerrainDetails';
 import {Button, ButtonText} from '../components/ui/button';
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
@@ -36,6 +38,7 @@ import {
   formatDuration,
   formatElevation,
   getElevationProfile,
+  getRouteTerrainDetails,
   getRouteStats,
 } from '../utils/routeStats';
 
@@ -100,10 +103,12 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [isSavingRoute, setIsSavingRoute] = useState(false);
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [isElevationModalVisible, setIsElevationModalVisible] = useState(false);
+  const [isTerrainModalVisible, setIsTerrainModalVisible] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
   const routeStats = getRouteStats(route);
   const elevationProfile = getElevationProfile(route);
+  const terrainDetails = getRouteTerrainDetails(route);
   const selectedWaypointIndex = waypoints.findIndex(
     waypoint => waypoint.id === selectedWaypointId,
   );
@@ -268,6 +273,20 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const closeElevationProfile = () => {
     triggerHaptic('selection');
     setIsElevationModalVisible(false);
+  };
+
+  const openTerrainDetails = () => {
+    if (!terrainDetails) {
+      return;
+    }
+
+    triggerHaptic('selection');
+    setIsTerrainModalVisible(true);
+  };
+
+  const closeTerrainDetails = () => {
+    triggerHaptic('selection');
+    setIsTerrainModalVisible(false);
   };
 
   const closeSaveRouteModal = () => {
@@ -504,8 +523,20 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             isDisabled={!elevationProfile}
             onPress={openElevationProfile}
           >
-            <ButtonText className="text-base font-bold text-zinc-900">
+            <ButtonText className="text-sm font-bold text-zinc-900">
               Altimetria
+            </ButtonText>
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            accessibilityLabel="Apri i tipi di terreno del percorso"
+            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
+            isDisabled={!terrainDetails}
+            onPress={openTerrainDetails}
+          >
+            <ButtonText className="text-sm font-bold text-zinc-900">
+              Terreno
             </ButtonText>
           </Button>
           <Button
@@ -515,8 +546,8 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             isDisabled={isSavingRoute}
             onPress={openSaveRouteModal}
           >
-            <ButtonText className="text-base font-bold text-white">
-              {isSavingRoute ? 'Salvataggio...' : 'Salva percorso'}
+            <ButtonText className="text-sm font-bold text-white">
+              {isSavingRoute ? 'Salvo...' : 'Salva'}
             </ButtonText>
           </Button>
         </View>
@@ -533,6 +564,30 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           </ButtonText>
         </Button>
       )}
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isTerrainModalVisible}
+        onRequestClose={closeTerrainDetails}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.terrainModalCard]}>
+            <Text style={styles.modalTitle}>Tipo di terreno</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.terrainModalContent}
+            >
+              {terrainDetails && (
+                <RouteTerrainDetails details={terrainDetails} />
+              )}
+            </ScrollView>
+            <Button variant="outline" onPress={closeTerrainDetails}>
+              <ButtonText>Chiudi</ButtonText>
+            </Button>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="slide"

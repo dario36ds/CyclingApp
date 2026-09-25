@@ -140,6 +140,14 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
+  terrainModalCard: {
+    maxHeight: '82%',
+  },
+
+  terrainModalContent: {
+    paddingBottom: 4,
+  },
+
   modalTitle: {
     color: '#18181B',
     fontSize: 20,
