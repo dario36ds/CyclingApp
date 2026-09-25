@@ -19,6 +19,11 @@ import {
   getSavedRoutes,
 } from '../services/savedRoutesService';
 import type {SavedRoute} from '../types/route';
+import {
+  formatDistance,
+  formatElevation,
+  getRouteStats,
+} from '../utils/routeStats';
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
   dateStyle: 'medium',
@@ -150,53 +155,75 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
           tintColor="#047857"
         />
       }
-      renderItem={({item}) => (
-        <View style={styles.card}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Apri il percorso ${item.name}`}
-            accessibilityHint="Mostra il percorso sulla mappa"
-            style={({pressed}) => pressed && styles.cardPressed}
-            onPress={() => openRoute(item)}
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.routeIcon}>
-                <Text style={styles.routeIconText}>↗</Text>
-              </View>
-              <View style={styles.cardTitleContainer}>
-                <Text style={styles.routeName} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Text style={styles.routeDate}>
-                  {formatCreatedAt(item.createdAt)}
-                </Text>
-              </View>
-            </View>
-          </Pressable>
-          <View style={styles.divider} />
-          <View style={styles.cardFooter}>
-            <Text style={styles.waypointCount}>
-              {item.waypoints.length}{' '}
-              {item.waypoints.length === 1 ? 'punto' : 'punti'} del percorso
-            </Text>
+      renderItem={({item}) => {
+        const routeStats = getRouteStats(item.geoJson);
+        const distance = routeStats
+          ? formatDistance(routeStats.distanceMeters)
+          : '—';
+        const elevation = routeStats
+          ? formatElevation(routeStats.ascentMeters)
+          : '—';
+
+        return (
+          <View style={styles.card}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Elimina il percorso ${item.name}`}
-              disabled={deletingRouteId !== null}
-              hitSlop={8}
-              style={({pressed}) => [
-                styles.deleteButton,
-                pressed && styles.deleteButtonPressed,
-              ]}
-              onPress={() => confirmDeleteRoute(item)}
+              accessibilityLabel={`Apri il percorso ${item.name}, distanza ${distance}, dislivello positivo ${elevation}`}
+              accessibilityHint="Mostra il percorso sulla mappa"
+              style={({pressed}) => pressed && styles.cardPressed}
+              onPress={() => openRoute(item)}
             >
-              <Text style={styles.deleteButtonText}>
-                {deletingRouteId === item.id ? 'Eliminazione...' : 'Elimina'}
-              </Text>
+              <View style={styles.cardHeader}>
+                <View style={styles.routeIcon}>
+                  <Text style={styles.routeIconText}>↗</Text>
+                </View>
+                <View style={styles.cardTitleContainer}>
+                  <Text style={styles.routeName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.routeDate}>
+                    {formatCreatedAt(item.createdAt)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.routeStats}>
+                <View style={styles.routeStat}>
+                  <Text style={styles.routeStatLabel}>DISTANZA</Text>
+                  <Text style={styles.routeStatValue}>{distance}</Text>
+                </View>
+                <View style={styles.routeStatsDivider} />
+                <View style={styles.routeStat}>
+                  <Text style={styles.routeStatLabel}>DISLIVELLO +</Text>
+                  <Text style={styles.routeStatValue}>{elevation}</Text>
+                </View>
+              </View>
             </Pressable>
+            <View style={styles.divider} />
+            <View style={styles.cardFooter}>
+              <Text style={styles.waypointCount}>
+                {item.waypoints.length}{' '}
+                {item.waypoints.length === 1 ? 'punto' : 'punti'} del percorso
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Elimina il percorso ${item.name}`}
+                disabled={deletingRouteId !== null}
+                hitSlop={8}
+                style={({pressed}) => [
+                  styles.deleteButton,
+                  pressed && styles.deleteButtonPressed,
+                ]}
+                onPress={() => confirmDeleteRoute(item)}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {deletingRouteId === item.id ? 'Eliminazione...' : 'Elimina'}
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      )}
+        );
+      }}
       ListEmptyComponent={
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>♧</Text>
@@ -278,6 +305,36 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: '#71717A',
     fontSize: 14,
+  },
+  routeStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#F4F4F5',
+  },
+  routeStat: {
+    flex: 1,
+  },
+  routeStatLabel: {
+    color: '#71717A',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  routeStatValue: {
+    marginTop: 3,
+    color: '#18181B',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  routeStatsDivider: {
+    width: 1,
+    height: 34,
+    marginHorizontal: 14,
+    backgroundColor: '#D4D4D8',
   },
   divider: {
     height: 1,
