@@ -22,6 +22,7 @@ import type {
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
+import {ElevationProfile} from '../components/ElevationProfile';
 import {Button, ButtonText} from '../components/ui/button';
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
@@ -33,6 +34,7 @@ import type {Coordinate} from '../types/route';
 import {
   formatDistance,
   formatElevation,
+  getElevationProfile,
   getRouteStats,
 } from '../utils/routeStats';
 
@@ -96,9 +98,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   );
   const [isSavingRoute, setIsSavingRoute] = useState(false);
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
+  const [isElevationModalVisible, setIsElevationModalVisible] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
   const routeStats = getRouteStats(route);
+  const elevationProfile = getElevationProfile(route);
   const selectedWaypointIndex = waypoints.findIndex(
     waypoint => waypoint.id === selectedWaypointId,
   );
@@ -249,6 +253,20 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     triggerHaptic('selection');
     setRouteName('');
     setIsSaveModalVisible(true);
+  };
+
+  const openElevationProfile = () => {
+    if (!elevationProfile) {
+      return;
+    }
+
+    triggerHaptic('selection');
+    setIsElevationModalVisible(true);
+  };
+
+  const closeElevationProfile = () => {
+    triggerHaptic('selection');
+    setIsElevationModalVisible(false);
   };
 
   const closeSaveRouteModal = () => {
@@ -461,17 +479,31 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       )}
 
       {route && (
-        <Button
-          variant="secondary"
-          size="lg"
-          className="absolute bottom-[168px] left-5 right-5 h-12 rounded-2xl bg-sky-700 shadow-lg data-[active=true]:bg-sky-800"
-          isDisabled={isSavingRoute}
-          onPress={openSaveRouteModal}
-        >
-          <ButtonText className="text-base font-bold text-white">
-            {isSavingRoute ? 'Salvataggio...' : 'Salva percorso'}
-          </ButtonText>
-        </Button>
+        <View style={styles.routeActions}>
+          <Button
+            variant="outline"
+            size="lg"
+            accessibilityLabel="Apri il profilo altimetrico"
+            className="h-12 flex-1 rounded-2xl border-zinc-200 bg-white shadow-lg data-[active=true]:bg-zinc-100 data-[disabled=true]:opacity-50"
+            isDisabled={!elevationProfile}
+            onPress={openElevationProfile}
+          >
+            <ButtonText className="text-base font-bold text-zinc-900">
+              Altimetria
+            </ButtonText>
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="h-12 flex-1 rounded-2xl bg-sky-700 shadow-lg data-[active=true]:bg-sky-800"
+            isDisabled={isSavingRoute}
+            onPress={openSaveRouteModal}
+          >
+            <ButtonText className="text-base font-bold text-white">
+              {isSavingRoute ? 'Salvataggio...' : 'Salva percorso'}
+            </ButtonText>
+          </Button>
+        </View>
       )}
 
       {waypoints.length >= 2 && (
@@ -485,6 +517,25 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           </ButtonText>
         </Button>
       )}
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isElevationModalVisible}
+        onRequestClose={closeElevationProfile}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.elevationModalCard]}>
+            <Text style={styles.modalTitle}>Profilo altimetrico</Text>
+            {elevationProfile && (
+              <ElevationProfile profile={elevationProfile} />
+            )}
+            <Button variant="outline" onPress={closeElevationProfile}>
+              <ButtonText>Chiudi</ButtonText>
+            </Button>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="fade"

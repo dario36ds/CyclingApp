@@ -113,6 +113,15 @@ export const styles = StyleSheet.create({
     gap: 10,
   },
 
+  routeActions: {
+    position: 'absolute',
+    bottom: 168,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    gap: 10,
+  },
+
   modalBackdrop: {
     flex: 1,
     justifyContent: 'center',
@@ -125,6 +134,10 @@ export const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
+  },
+
+  elevationModalCard: {
+    paddingHorizontal: 16,
   },
 
   modalTitle: {
