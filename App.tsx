@@ -89,6 +89,7 @@ function App() {
               component={SavedRoutesScreen}
               options={{
                 title: 'Percorsi salvati',
+                headerShown: false,
                 tabBarLabel: 'Salvati',
                 tabBarIcon: SavedRoutesTabIcon,
               }}

@@ -1,51 +1,39 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type TabBarIconProps = {
   color: string;
+  focused: boolean;
   name: 'map' | 'saved' | 'settings';
   size: number;
 };
 
-export function TabBarIcon({color, name, size}: TabBarIconProps) {
-  if (name === 'map') {
-    return <MaterialCommunityIcons name="map" color={color} size={size} />;
-  }
-  if (name === 'saved') {
-    return (
-      <MaterialCommunityIcons
-        name="content-save-outline"
-        color={color}
-        size={size}
-      />
-    );
-  }
-  if (name === 'settings') {
-    return <MaterialCommunityIcons name="cog-outline" color={color} size={size} />;
-  }
+const ICON_NAMES = {
+  map: 'compass-outline',
+  saved: 'bookmark-check-outline',
+  settings: 'cog-outline',
+} as const;
 
-  // Placeholder temporanei: sostituire con le icone definitive.
+export function TabBarIcon({color, focused, name, size}: TabBarIconProps) {
   return (
-    <View style={[styles.placeholder, {borderColor: color}]}>
-      <Text style={[styles.placeholderText, {color}]}>
-        {name === 'saved' ? 'S' : 'I'}
-      </Text>
+    <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+      <MaterialCommunityIcons
+        name={ICON_NAMES[name]}
+        color={color}
+        size={Math.min(size, 20)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  placeholder: {
-    width: 22,
-    height: 22,
+  iconContainer: {
+    width: 32,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: 6,
+    borderRadius: 999,
   },
-  placeholderText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  iconContainerActive: {backgroundColor: '#ECFDF5'},
 });

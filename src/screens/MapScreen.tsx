@@ -690,7 +690,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 onPress={openTerrainDetails}
               >
                 <MaterialCommunityIcons
-                  name="chart-bell-curve-cumulative"
+                  name="terrain"
                   color="#64748B"
                   size={14}
                 />
