@@ -1,10 +1,10 @@
 import React from 'react';
 import type {PropsWithChildren} from 'react';
-import {Text} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import {GluestackUIProvider} from '@/src/components/ui/gluestack-ui-provider';
+import {TabBarIcon} from './src/components/TabBarIcon';
 import {HapticFeedbackProvider} from './src/context/HapticFeedbackContext';
 import {MapPreferencesProvider} from './src/context/MapPreferencesContext';
 import type {RootTabParamList} from './src/navigation/types';
@@ -15,21 +15,22 @@ import '@/global.css';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-type TabIconProps = {
+type NavigationIconProps = {
   color: string;
+  focused: boolean;
   size: number;
 };
 
-function MapTabIcon({color, size}: TabIconProps) {
-  return <Text style={{color, fontSize: size}}>⌖</Text>;
+function MapTabIcon(props: NavigationIconProps) {
+  return <TabBarIcon {...props} name="map" />;
 }
 
-function SavedRoutesTabIcon({color, size}: TabIconProps) {
-  return <Text style={{color, fontSize: size}}>≡</Text>;
+function SavedRoutesTabIcon(props: NavigationIconProps) {
+  return <TabBarIcon {...props} name="saved" />;
 }
 
-function SettingsTabIcon({color, size}: TabIconProps) {
-  return <Text style={{color, fontSize: size}}>⚙</Text>;
+function SettingsTabIcon(props: NavigationIconProps) {
+  return <TabBarIcon {...props} name="settings" />;
 }
 
 function AppProviders({children}: PropsWithChildren) {
@@ -49,13 +50,27 @@ function App() {
             screenOptions={{
               headerShadowVisible: false,
               headerStyle: {backgroundColor: '#FFFFFF'},
-              headerTitleStyle: {color: '#18181B', fontWeight: '700'},
-              tabBarActiveTintColor: '#047857',
-              tabBarInactiveTintColor: '#71717A',
-              tabBarLabelStyle: {fontSize: 12, fontWeight: '600'},
+              headerTitleStyle: {color: '#0F172A', fontWeight: '700'},
+              tabBarActiveTintColor: '#059669',
+              tabBarInactiveTintColor: '#94A3B8',
+              tabBarHideOnKeyboard: true,
+              tabBarItemStyle: {paddingTop: 5},
+              tabBarLabelStyle: {
+                marginTop: 2,
+                fontSize: 11,
+                fontWeight: '600',
+              },
               tabBarStyle: {
                 backgroundColor: '#FFFFFF',
-                borderTopColor: '#E4E4E7',
+                borderTopColor: '#E2E8F0',
+                borderTopWidth: 1,
+                height: 68,
+                paddingBottom: 8,
+                shadowColor: '#0F172A',
+                shadowOffset: {width: 0, height: -4},
+                shadowOpacity: 0.05,
+                shadowRadius: 12,
+                elevation: 10,
               },
             }}
           >
