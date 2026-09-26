@@ -237,10 +237,15 @@ export const styles = StyleSheet.create({
   sheetHandle: {
     width: 40,
     height: 4,
-    alignSelf: 'center',
-    marginBottom: 1,
     borderRadius: 2,
     backgroundColor: '#CBD5E1',
+  },
+
+  sheetDragArea: {
+    width: '100%',
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   sheetButtonRow: {

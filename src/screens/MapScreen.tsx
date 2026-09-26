@@ -1,8 +1,10 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
+  Animated,
   Alert,
   Modal,
   NativeSyntheticEvent,
+  PanResponder,
   Pressable,
   ScrollView,
   Switch,
@@ -62,6 +64,7 @@ type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
 const STREET_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const TUSCANY_CENTER: Coordinate = [11.25, 43.77];
 const LOCATION_TIMEOUT_MS = 12_000;
+const COLLAPSED_SHEET_HEIGHT = 44;
 
 const HYBRID_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -121,6 +124,10 @@ function getCurrentDevicePosition() {
 
 export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) {
   const cameraRef = useRef<CameraRef>(null);
+  const actionSheetTranslateY = useRef(new Animated.Value(0)).current;
+  const actionSheetHeight = useRef(0);
+  const actionSheetOffsetY = useRef(0);
+  const isActionSheetCollapsed = useRef(false);
   const insets = useSafeAreaInsets();
   const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
     useMapPreferences();
@@ -153,6 +160,88 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     styles.quickControls,
     {top: insets.top + 172},
   ];
+
+  const snapActionSheet = useCallback(
+    (collapsed: boolean) => {
+      const nextOffset = collapsed
+        ? Math.max(0, actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT)
+        : 0;
+
+      Animated.spring(actionSheetTranslateY, {
+        toValue: nextOffset,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 220,
+        mass: 0.7,
+      }).start(({finished}) => {
+        if (finished) {
+          actionSheetOffsetY.current = nextOffset;
+          isActionSheetCollapsed.current = collapsed;
+        }
+      });
+    },
+    [actionSheetTranslateY],
+  );
+
+  const handleActionSheetLayout = useCallback(
+    ({nativeEvent}: {nativeEvent: {layout: {height: number}}}) => {
+      actionSheetHeight.current = nativeEvent.layout.height;
+
+      if (isActionSheetCollapsed.current) {
+        const collapsedOffset = Math.max(
+          0,
+          actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT,
+        );
+        actionSheetOffsetY.current = collapsedOffset;
+        actionSheetTranslateY.setValue(collapsedOffset);
+      }
+    },
+    [actionSheetTranslateY],
+  );
+
+  const actionSheetPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dy) > 3 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderGrant: () => {
+          actionSheetTranslateY.stopAnimation(value => {
+            actionSheetOffsetY.current = value;
+          });
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const maxOffset = Math.max(
+            0,
+            actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT,
+          );
+          const nextOffset = Math.min(
+            maxOffset,
+            Math.max(0, actionSheetOffsetY.current + gestureState.dy),
+          );
+
+          actionSheetTranslateY.setValue(nextOffset);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const maxOffset = Math.max(
+            0,
+            actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT,
+          );
+          const currentOffset = Math.min(
+            maxOffset,
+            Math.max(0, actionSheetOffsetY.current + gestureState.dy),
+          );
+          const shouldCollapse =
+            gestureState.vy > 0.3 || currentOffset > maxOffset / 2;
+
+          snapActionSheet(shouldCollapse);
+        },
+        onPanResponderTerminate: () => {
+          snapActionSheet(isActionSheetCollapsed.current);
+        },
+      }),
+    [actionSheetTranslateY, snapActionSheet],
+  );
 
   useEffect(() => {
     const savedRoute = navigationRoute.params?.savedRoute;
@@ -658,8 +747,21 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         </Pressable>
       </View>
 
-      <View style={styles.actionSheet}>
-          <View style={styles.sheetHandle} />
+      <Animated.View
+        style={[
+          styles.actionSheet,
+          {transform: [{translateY: actionSheetTranslateY}]},
+        ]}
+        onLayout={handleActionSheetLayout}
+      >
+          <View
+            {...actionSheetPanResponder.panHandlers}
+            accessibilityLabel="Trascina il pannello azioni per mostrare più mappa"
+            accessibilityRole="adjustable"
+            style={styles.sheetDragArea}
+          >
+            <View style={styles.sheetHandle} />
+          </View>
 
           <View style={styles.sheetButtonRow}>
               <Pressable
@@ -798,7 +900,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
               Cancella tutti i waypoint
             </Text>
           </Pressable>
-      </View>
+      </Animated.View>
 
       <Modal
         animationType="slide"
