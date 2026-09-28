@@ -18,6 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
+import {useTheme} from '../context/ThemeContext';
 import type {RootTabParamList} from '../navigation/types';
 import {deleteSavedRoute, getSavedRoutes} from '../services/savedRoutesService';
 import type {SavedRoute} from '../types/route';
@@ -77,6 +78,7 @@ function formatWaypointCount(count: number) {
 export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
   const {triggerHaptic} = useHapticFeedback();
   const {measurementSystem} = useMapPreferences();
+  const {isDarkMode} = useTheme();
   const [routes, setRoutes] = useState<SavedRoute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -195,21 +197,28 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centeredContainer} edges={['top']}>
+      <SafeAreaView
+        style={[styles.centeredContainer, isDarkMode && styles.surfaceDark]}
+        edges={['top']}
+      >
         <ActivityIndicator size="large" color="#059669" />
-        <Text style={styles.statusText}>Caricamento percorsi...</Text>
+        <Text style={[styles.statusText, isDarkMode && styles.secondaryTextDark]}>
+          Caricamento percorsi...
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerArea}>
+    <SafeAreaView style={[styles.container, isDarkMode && styles.surfaceDark]} edges={['top']}>
+      <View style={[styles.headerArea, isDarkMode && styles.headerAreaDark]}>
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>ARCHIVIO ATTIVITÀ</Text>
-            <Text style={styles.title}>Percorsi salvati</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, isDarkMode && styles.primaryTextDark]}>
+              Percorsi salvati
+            </Text>
+            <Text style={[styles.subtitle, isDarkMode && styles.secondaryTextDark]}>
               {routes.length}{' '}
               {routes.length === 1
                 ? 'itinerario sincronizzato'
@@ -231,14 +240,14 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
           </Pressable>
         </View>
 
-        <View style={styles.searchBox}>
+        <View style={[styles.searchBox, isDarkMode && styles.searchBoxDark]}>
           <MaterialCommunityIcons name="magnify" color="#94A3B8" size={20} />
           <TextInput
             accessibilityLabel="Cerca nei percorsi salvati"
             value={searchQuery}
-            style={styles.searchInput}
+            style={[styles.searchInput, isDarkMode && styles.primaryTextDark]}
             placeholder="Cerca nei tuoi percorsi..."
-            placeholderTextColor="#0F172A"
+            placeholderTextColor={isDarkMode ? '#94A3B8' : '#0F172A'}
             returnKeyType="search"
             onChangeText={setSearchQuery}
           />
@@ -270,7 +279,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
       </View>
 
       <FlatList
-        style={styles.routeList}
+        style={[styles.routeList, isDarkMode && styles.surfaceDark]}
         data={filteredRoutes}
         keyExtractor={route => route.id}
         contentContainerStyle={styles.content}
@@ -299,7 +308,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
               : '—';
 
           return (
-            <View style={styles.card}>
+            <View style={[styles.card, isDarkMode && styles.cardDark]}>
               <View style={styles.cardHeader}>
                 <View style={styles.routeIdentity}>
                   <View style={styles.routeIcon}>
@@ -310,7 +319,10 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
                     />
                   </View>
                   <View style={styles.cardTitleContainer}>
-                    <Text style={styles.routeName} numberOfLines={2}>
+                    <Text
+                      style={[styles.routeName, isDarkMode && styles.primaryTextDark]}
+                      numberOfLines={2}
+                    >
                       {item.name}
                     </Text>
                     <View style={styles.dateRow}>
@@ -342,19 +354,29 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
                 </View>
               </View>
 
-              <View style={styles.routeStats}>
+              <View style={[styles.routeStats, isDarkMode && styles.routeStatsDark]}>
                 <RouteMetric
                   icon="sign-direction"
                   label="DISTANZA"
                   value={distance}
                 />
-                <View style={styles.routeStatsDivider} />
+                <View
+                  style={[
+                    styles.routeStatsDivider,
+                    isDarkMode && styles.dividerDark,
+                  ]}
+                />
                 <RouteMetric
                   icon="trending-up"
                   label="DISLIVELLO"
                   value={elevation}
                 />
-                <View style={styles.routeStatsDivider} />
+                <View
+                  style={[
+                    styles.routeStatsDivider,
+                    isDarkMode && styles.dividerDark,
+                  ]}
+                />
                 <RouteMetric
                   icon="clock-outline"
                   label="TEMPO"
@@ -362,7 +384,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
                 />
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, isDarkMode && styles.dividerDark]} />
               <View style={styles.cardFooter}>
                 <View style={styles.waypointRow}>
                   <MaterialCommunityIcons
@@ -370,7 +392,12 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
                     color="#059669"
                     size={22}
                   />
-                  <Text style={styles.waypointCount}>
+                  <Text
+                    style={[
+                      styles.waypointCount,
+                      isDarkMode && styles.secondaryTextDark,
+                    ]}
+                  >
                     {formatWaypointCount(item.waypoints.length)}
                   </Text>
                 </View>
@@ -430,14 +457,19 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
               color="#059669"
               size={46}
             />
-            <Text style={styles.emptyTitle}>
+            <Text style={[styles.emptyTitle, isDarkMode && styles.primaryTextDark]}>
               {errorMessage
                 ? 'Qualcosa è andato storto'
                 : searchQuery || activeFilter !== 'all'
                 ? 'Nessun percorso trovato'
                 : 'Nessun percorso salvato'}
             </Text>
-            <Text style={styles.emptyDescription}>
+            <Text
+              style={[
+                styles.emptyDescription,
+                isDarkMode && styles.secondaryTextDark,
+              ]}
+            >
               {errorMessage
                 ? errorMessage
                 : searchQuery || activeFilter !== 'all'
@@ -461,6 +493,8 @@ function FilterChip({
   label: string;
   onPress: () => void;
 }) {
+  const {isDarkMode} = useTheme();
+
   return (
     <Pressable
       cssInterop={false}
@@ -469,13 +503,18 @@ function FilterChip({
       accessibilityState={{selected: active}}
       style={({pressed}) => [
         styles.filterChip,
+        isDarkMode && styles.filterChipDark,
         active && styles.filterChipActive,
         pressed && styles.filterChipPressed,
       ]}
       onPress={onPress}
     >
       <Text
-        style={[styles.filterChipText, active && styles.filterChipTextActive]}
+        style={[
+          styles.filterChipText,
+          isDarkMode && styles.secondaryTextDark,
+          active && styles.filterChipTextActive,
+        ]}
       >
         {label}
       </Text>
@@ -492,26 +531,38 @@ function RouteMetric({
   label: string;
   value: string;
 }) {
+  const {isDarkMode} = useTheme();
+
   return (
     <View style={styles.routeStat}>
       <View style={styles.metricLabelRow}>
         <MaterialCommunityIcons name={icon} color="#94A3B8" size={13} />
         <Text style={styles.routeStatLabel}>{label}</Text>
       </View>
-      <MetricValue value={value} />
+      <MetricValue value={value} isDarkMode={isDarkMode} />
     </View>
   );
 }
 
-function MetricValue({value}: {value: string}) {
+function MetricValue({
+  value,
+  isDarkMode,
+}: {
+  value: string;
+  isDarkMode: boolean;
+}) {
   const parts = value.match(/[0-9.,]+|[^\d\s]+/g) ?? [value];
 
   if (parts.length === 1) {
-    return <Text style={styles.routeStatValue}>{value}</Text>;
+    return (
+      <Text style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}>
+        {value}
+      </Text>
+    );
   }
 
   return (
-    <Text style={styles.routeStatValue}>
+    <Text style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}>
       {parts.map((part, index) => {
         const isUnit = /^(km|m|mi|ft|h|min)$/.test(part);
         const displayedPart =
@@ -538,6 +589,9 @@ function MetricValue({value}: {value: string}) {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#FFFFFF'},
+  surfaceDark: {backgroundColor: '#0F172A'},
+  primaryTextDark: {color: '#F8FAFC'},
+  secondaryTextDark: {color: '#CBD5E1'},
   routeList: {flex: 1, backgroundColor: '#F8FAFC'},
   centeredContainer: {
     flex: 1,
@@ -562,6 +616,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
   },
+  headerAreaDark: {borderBottomColor: '#334155', backgroundColor: '#1E293B'},
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,6 +680,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F1F5F9E6',
   },
+  searchBoxDark: {borderColor: '#475569', backgroundColor: '#0F172A'},
   searchInput: {
     flex: 1,
     minHeight: 32,
@@ -643,6 +699,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#F1F5F9',
   },
+  filterChipDark: {borderColor: '#475569', backgroundColor: '#1E293B'},
   filterChipActive: {
     borderColor: '#0F172A',
     backgroundColor: '#0F172A',
@@ -672,6 +729,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  cardDark: {borderColor: '#334155', backgroundColor: '#1E293B'},
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -733,6 +791,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
   },
+  routeStatsDark: {borderColor: '#334155', backgroundColor: '#0F172A'},
   routeStat: {flex: 1, paddingHorizontal: 8},
   metricLabelRow: {flexDirection: 'row', alignItems: 'center', gap: 4},
   routeStatLabel: {
@@ -752,6 +811,7 @@ const styles = StyleSheet.create({
   },
   metricUnit: {color: '#64748B', fontSize: 11, fontWeight: '400'},
   routeStatsDivider: {width: 1, backgroundColor: '#E2E8F0CC'},
+  dividerDark: {backgroundColor: '#334155'},
   divider: {
     height: 1,
     marginTop: 12,

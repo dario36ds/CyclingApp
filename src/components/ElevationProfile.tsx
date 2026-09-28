@@ -11,6 +11,7 @@ import Svg, {
 
 import type {ElevationProfileData} from '../utils/routeStats';
 import {useMapPreferences} from '../context/MapPreferencesContext';
+import {useTheme} from '../context/ThemeContext';
 import {formatDistance, formatElevation} from '../utils/routeStats';
 
 type ElevationProfileProps = {
@@ -44,6 +45,7 @@ function samplePoints(profile: ElevationProfileData) {
 
 export function ElevationProfile({profile}: ElevationProfileProps) {
   const {measurementSystem} = useMapPreferences();
+  const {isDarkMode} = useTheme();
   const plotWidth = CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT;
   const plotHeight = CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM;
   const elevationRange = Math.max(
@@ -86,21 +88,35 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
     >
       <View style={styles.summary}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>QUOTA MINIMA</Text>
-          <Text style={styles.summaryValue}>
+          <Text
+            style={[styles.summaryLabel, isDarkMode && styles.summaryLabelDark]}
+          >
+            QUOTA MINIMA
+          </Text>
+          <Text
+            style={[styles.summaryValue, isDarkMode && styles.summaryValueDark]}
+          >
             {formatElevation(profile.minElevationMeters, measurementSystem)}
           </Text>
         </View>
-        <View style={styles.summaryDivider} />
+        <View
+          style={[styles.summaryDivider, isDarkMode && styles.summaryDividerDark]}
+        />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>QUOTA MASSIMA</Text>
-          <Text style={styles.summaryValue}>
+          <Text
+            style={[styles.summaryLabel, isDarkMode && styles.summaryLabelDark]}
+          >
+            QUOTA MASSIMA
+          </Text>
+          <Text
+            style={[styles.summaryValue, isDarkMode && styles.summaryValueDark]}
+          >
             {formatElevation(profile.maxElevationMeters, measurementSystem)}
           </Text>
         </View>
       </View>
 
-      <View style={styles.chartContainer}>
+      <View style={[styles.chartContainer, isDarkMode && styles.chartContainerDark]}>
         <Svg
           width="100%"
           height={CHART_HEIGHT}
@@ -214,21 +230,25 @@ const styles = StyleSheet.create({
     height: 34,
     backgroundColor: '#E4E4E7',
   },
+  summaryDividerDark: {backgroundColor: '#475569'},
   summaryLabel: {
     color: '#71717A',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  summaryLabelDark: {color: '#CBD5E1'},
   summaryValue: {
     marginTop: 2,
     color: '#18181B',
     fontSize: 18,
     fontWeight: '800',
   },
+  summaryValueDark: {color: '#F8FAFC'},
   chartContainer: {
     overflow: 'hidden',
     borderRadius: 14,
     backgroundColor: '#F4F4F5',
   },
+  chartContainerDark: {backgroundColor: '#1E293B'},
 });

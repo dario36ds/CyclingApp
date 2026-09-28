@@ -13,6 +13,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
+import {useTheme} from '../context/ThemeContext';
 
 type SettingIconProps = {
   backgroundColor: string;
@@ -35,7 +36,13 @@ function SettingIcon({
 }
 
 function SectionTitle({children}: {children: React.ReactNode}) {
-  return <Text style={styles.sectionTitle}>{children}</Text>;
+  const {isDarkMode} = useTheme();
+
+  return (
+    <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>
+      {children}
+    </Text>
+  );
 }
 
 export function SettingsScreen() {
@@ -50,9 +57,15 @@ export function SettingsScreen() {
     setHapticFeedbackEnabled,
     triggerHaptic,
   } = useHapticFeedback();
+  const {isDarkMode, setIsDarkMode} = useTheme();
   const handleSatelliteViewChange = (enabled: boolean) => {
     triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
     setSatelliteViewEnabled(enabled);
+  };
+
+  const handleDarkModeChange = (enabled: boolean) => {
+    triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
+    setIsDarkMode(enabled);
   };
 
   const selectMeasurementSystem = (system: 'metric' | 'imperial') => {
@@ -75,9 +88,14 @@ export function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Impostazioni</Text>
+    <SafeAreaView
+      style={[styles.container, isDarkMode && styles.containerDark]}
+      edges={['top']}
+    >
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
+        <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>
+          Impostazioni
+        </Text>
         <View style={styles.headerIcon}>
           <MaterialCommunityIcons name="tune-variant" color="#64748B" size={17} />
         </View>
@@ -90,7 +108,7 @@ export function SettingsScreen() {
       >
         <View style={styles.section}>
           <SectionTitle>MAPPA &amp; VISUALIZZAZIONE</SectionTitle>
-          <View style={styles.card}>
+          <View style={[styles.card, isDarkMode && styles.cardDark]}>
             <View style={styles.settingRowTop}>
               <SettingIcon
                 name="map"
@@ -99,10 +117,12 @@ export function SettingsScreen() {
                 borderColor="#D1FAE5"
               />
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>
+                <Text
+                  style={[styles.settingTitle, isDarkMode && styles.settingTitleDark]}
+                >
                   Vista satellitare ibrida
                 </Text>
-                <Text style={styles.description}>
+                <Text style={[styles.description, isDarkMode && styles.descriptionDark]}>
                   Mostra immagini satellitari dettagliate sovrapposte a nomi
                   di città, strade e confini.
                 </Text>
@@ -116,12 +136,41 @@ export function SettingsScreen() {
                 onValueChange={handleSatelliteViewChange}
               />
             </View>
+
+            <View style={[styles.divider, isDarkMode && styles.dividerDark]} />
+
+            <View style={styles.settingRowTop}>
+              <SettingIcon
+                name="theme-light-dark"
+                color="#7C3AED"
+                backgroundColor="#F5F3FF"
+                borderColor="#EDE9FE"
+              />
+              <View style={styles.settingText}>
+                <Text
+                  style={[styles.settingTitle, isDarkMode && styles.settingTitleDark]}
+                >
+                  Tema scuro
+                </Text>
+                <Text style={[styles.description, isDarkMode && styles.descriptionDark]}>
+                  Usa colori scuri nell’interfaccia dell’app.
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel="Tema scuro"
+                value={isDarkMode}
+                trackColor={{false: '#CBD5E1', true: '#10B981'}}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor="#CBD5E1"
+                onValueChange={handleDarkModeChange}
+              />
+            </View>
           </View>
         </View>
 
         <View style={styles.section}>
           <SectionTitle>INTERAZIONI &amp; DISPOSITIVO</SectionTitle>
-          <View style={styles.card}>
+          <View style={[styles.card, isDarkMode && styles.cardDark]}>
             <View style={styles.settingRowTop}>
               <SettingIcon
                 name="cellphone"
@@ -130,8 +179,12 @@ export function SettingsScreen() {
                 borderColor="#D1FAE5"
               />
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Feedback aptico</Text>
-                <Text style={styles.description}>
+                <Text
+                  style={[styles.settingTitle, isDarkMode && styles.settingTitleDark]}
+                >
+                  Feedback aptico
+                </Text>
+                <Text style={[styles.description, isDarkMode && styles.descriptionDark]}>
                   Riproduce una risposta tattile calibrata durante le azioni
                   principali e i cambi di stato.
                 </Text>
@@ -146,7 +199,7 @@ export function SettingsScreen() {
               />
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDarkMode && styles.dividerDark]} />
 
             <View style={styles.settingRowCenter}>
               <SettingIcon
@@ -155,7 +208,13 @@ export function SettingsScreen() {
                 backgroundColor="#FFFBEB"
                 borderColor="#FEF3C7"
               />
-              <Text style={[styles.settingTitle, styles.measurementTitle]}>
+              <Text
+                style={[
+                  styles.settingTitle,
+                  styles.measurementTitle,
+                  isDarkMode && styles.settingTitleDark,
+                ]}
+              >
                 Unità di misura
               </Text>
               <View style={styles.segmentedControl}>
@@ -210,7 +269,7 @@ export function SettingsScreen() {
 
         <View style={styles.section}>
           <SectionTitle>INFO &amp; SUPPORTO</SectionTitle>
-          <View style={styles.card}>
+          <View style={[styles.card, isDarkMode && styles.cardDark]}>
             <Pressable
               accessibilityRole="link"
               accessibilityLabel="Apri il sito di MapLibre"
@@ -224,10 +283,17 @@ export function SettingsScreen() {
                 borderColor="#F3E8FF"
               />
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>
+                <Text
+                  style={[styles.settingTitle, isDarkMode && styles.settingTitleDark]}
+                >
                   Fornitori Dati Cartografici
                 </Text>
-                <Text style={styles.infoDescription}>
+                <Text
+                  style={[
+                    styles.infoDescription,
+                    isDarkMode && styles.descriptionDark,
+                  ]}
+                >
                   MapLibre GL • OpenStreetMap
                 </Text>
               </View>
@@ -238,7 +304,7 @@ export function SettingsScreen() {
               />
             </Pressable>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDarkMode && styles.dividerDark]} />
 
             <Pressable
               accessibilityRole="link"
@@ -253,8 +319,17 @@ export function SettingsScreen() {
                 borderColor="#DBEAFE"
               />
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Calcolo percorsi</Text>
-                <Text style={styles.infoDescription}>
+                <Text
+                  style={[styles.settingTitle, isDarkMode && styles.settingTitleDark]}
+                >
+                  Calcolo percorsi
+                </Text>
+                <Text
+                  style={[
+                    styles.infoDescription,
+                    isDarkMode && styles.descriptionDark,
+                  ]}
+                >
                   OpenRouteService (ORS)
                 </Text>
               </View>
@@ -273,6 +348,7 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#F8FAFC'},
+  containerDark: {backgroundColor: '#0F172A'},
   header: {
     minHeight: 74,
     flexDirection: 'row',
@@ -290,6 +366,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.7,
   },
+  headerDark: {borderBottomColor: '#334155', backgroundColor: '#1E293B'},
+  headerTitleDark: {color: '#F8FAFC'},
   headerIcon: {
     width: 40,
     height: 40,
@@ -313,6 +391,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
+  sectionTitleDark: {color: '#94A3B8'},
   card: {
     overflow: 'hidden',
     borderWidth: 1,
@@ -325,6 +404,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
+  cardDark: {borderColor: '#334155', backgroundColor: '#1E293B'},
   settingRowTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -347,14 +427,17 @@ const styles = StyleSheet.create({
   },
   settingText: {flex: 1},
   settingTitle: {color: '#0F172A', fontSize: 15, fontWeight: '700'},
+  settingTitleDark: {color: '#F8FAFC'},
   description: {
     marginTop: 3,
     color: '#64748B',
     fontSize: 12,
     lineHeight: 18,
   },
+  descriptionDark: {color: '#CBD5E1'},
   infoDescription: {marginTop: 3, color: '#64748B', fontSize: 12},
   divider: {height: 1, backgroundColor: '#F1F5F9'},
+  dividerDark: {backgroundColor: '#334155'},
   measurementTitle: {flex: 1},
   segmentedControl: {
     flexDirection: 'row',

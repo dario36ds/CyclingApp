@@ -33,6 +33,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  mapHeaderCardDark: {
+    borderColor: 'rgba(71, 85, 105, 0.95)',
+    backgroundColor: 'rgba(15, 23, 42, 0.96)',
+  },
 
   mapHeaderIdentity: {
     flexDirection: 'row',
@@ -54,6 +58,8 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  primaryTextDark: {color: '#F8FAFC'},
+  secondaryTextDark: {color: '#CBD5E1'},
 
   mapHeaderSubtitle: {
     marginTop: 1,
@@ -198,6 +204,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 7,
     elevation: 7,
   },
+  quickControlButtonDark: {
+    borderColor: '#475569',
+    backgroundColor: '#0F172A',
+  },
 
   quickControlText: {
     color: '#0F172A',
@@ -233,6 +243,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 12,
   },
+  actionSheetDark: {
+    borderColor: 'rgba(71, 85, 105, 0.95)',
+    backgroundColor: 'rgba(15, 23, 42, 0.98)',
+  },
 
   sheetHandle: {
     width: 40,
@@ -240,6 +254,7 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#CBD5E1',
   },
+  sheetHandleDark: {backgroundColor: '#475569'},
 
   sheetDragArea: {
     width: '100%',
@@ -400,6 +415,7 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
   },
+  modalCardDark: {backgroundColor: '#0F172A'},
 
   elevationModalCard: {
     paddingHorizontal: 16,
@@ -428,6 +444,11 @@ export const styles = StyleSheet.create({
     color: '#18181B',
     fontSize: 16,
     backgroundColor: '#FAFAFA',
+  },
+  routeNameInputDark: {
+    borderColor: '#475569',
+    color: '#F8FAFC',
+    backgroundColor: '#1E293B',
   },
 
   modalActions: {

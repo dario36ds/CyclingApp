@@ -6,6 +6,7 @@ import type {
   RouteTerrainDetails as RouteTerrainDetailsData,
 } from '../utils/routeStats';
 import {useMapPreferences} from '../context/MapPreferencesContext';
+import {useTheme} from '../context/ThemeContext';
 import {formatDistance} from '../utils/routeStats';
 
 type RouteTerrainDetailsProps = {
@@ -20,17 +21,24 @@ function formatPercentage(percentage: number) {
 
 function BreakdownRow({item}: {item: RouteBreakdownItem}) {
   const {measurementSystem} = useMapPreferences();
+  const {isDarkMode} = useTheme();
 
   return (
     <View style={styles.breakdownRow}>
       <View style={styles.breakdownHeader}>
-        <Text style={styles.breakdownLabel}>{item.label}</Text>
-        <Text style={styles.breakdownValue}>
+        <Text
+          style={[styles.breakdownLabel, isDarkMode && styles.breakdownLabelDark]}
+        >
+          {item.label}
+        </Text>
+        <Text
+          style={[styles.breakdownValue, isDarkMode && styles.breakdownValueDark]}
+        >
           {formatPercentage(item.percentage)} ·{' '}
           {formatDistance(item.distanceMeters, measurementSystem)}
         </Text>
       </View>
-      <View style={styles.progressTrack}>
+      <View style={[styles.progressTrack, isDarkMode && styles.progressTrackDark]}>
         <View
           style={[styles.progressFill, {width: `${item.percentage}%`}]}
         />
@@ -40,11 +48,20 @@ function BreakdownRow({item}: {item: RouteBreakdownItem}) {
 }
 
 export function RouteTerrainDetails({details}: RouteTerrainDetailsProps) {
+  const {isDarkMode} = useTheme();
+
   return (
     <View style={styles.container}>
       <View>
-        <Text style={styles.sectionTitle}>Tipo di terreno</Text>
-        <Text style={styles.sectionDescription}>
+        <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>
+          Tipo di terreno
+        </Text>
+        <Text
+          style={[
+            styles.sectionDescription,
+            isDarkMode && styles.sectionDescriptionDark,
+          ]}
+        >
           Distribuzione rilevata da OpenStreetMap lungo il percorso e
           semplificata in tre categorie.
         </Text>
@@ -55,7 +72,9 @@ export function RouteTerrainDetails({details}: RouteTerrainDetailsProps) {
           <BreakdownRow key={item.value} item={item} />
         ))
       ) : (
-        <Text style={styles.emptyText}>Dati sulla superficie non disponibili.</Text>
+        <Text style={[styles.emptyText, isDarkMode && styles.sectionDescriptionDark]}>
+          Dati sulla superficie non disponibili.
+        </Text>
       )}
     </View>
   );
@@ -70,12 +89,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
+  sectionTitleDark: {color: '#F8FAFC'},
   sectionDescription: {
     marginTop: 4,
     color: '#71717A',
     fontSize: 13,
     lineHeight: 18,
   },
+  sectionDescriptionDark: {color: '#CBD5E1'},
   breakdownRow: {
     gap: 6,
   },
@@ -90,17 +111,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  breakdownLabelDark: {color: '#F8FAFC'},
   breakdownValue: {
     color: '#52525B',
     fontSize: 13,
     fontWeight: '600',
   },
+  breakdownValueDark: {color: '#CBD5E1'},
   progressTrack: {
     height: 7,
     overflow: 'hidden',
     borderRadius: 4,
     backgroundColor: '#E4E4E7',
   },
+  progressTrackDark: {backgroundColor: '#475569'},
   progressFill: {
     height: '100%',
     borderRadius: 4,

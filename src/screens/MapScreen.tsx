@@ -36,6 +36,7 @@ import {RouteTerrainDetails} from '../components/RouteTerrainDetails';
 import {Button, ButtonText} from '../components/ui/button';
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
+import {useTheme} from '../context/ThemeContext';
 import type {RootTabParamList} from '../navigation/types';
 import {calculateRoute} from '../services/openRouteService';
 import {saveRoute} from '../services/savedRoutesService';
@@ -135,6 +136,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     measurementSystem,
   } = useMapPreferences();
   const {triggerHaptic} = useHapticFeedback();
+  const {isDarkMode} = useTheme();
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [nextWaypointId, setNextWaypointId] = useState(0);
   const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
@@ -651,16 +653,32 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       </Map>
 
       <View style={topControlsStyle}>
-        <View style={styles.mapHeaderCard}>
+        <View
+          style={[styles.mapHeaderCard, isDarkMode && styles.mapHeaderCardDark]}
+        >
           <View style={styles.mapHeaderIdentity}>
             <View style={styles.onlineIndicator} />
             <View>
-              <Text style={styles.mapHeaderTitle}>Pianifica Percorso</Text>
+              <Text
+                style={[
+                  styles.mapHeaderTitle,
+                  isDarkMode && styles.primaryTextDark,
+                ]}
+              >
+                Pianifica Percorso
+              </Text>
             </View>
           </View>
 
           <View style={styles.mapTypeToggle}>
-            <Text style={styles.mapTypeLabel}>Satellite</Text>
+            <Text
+              style={[
+                styles.mapTypeLabel,
+                isDarkMode && styles.secondaryTextDark,
+              ]}
+            >
+              Satellite
+            </Text>
             <Switch
               accessibilityLabel="Vista satellitare ibrida"
               value={isSatelliteViewEnabled}
@@ -685,14 +703,16 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
                 )}`
               : 'Statistiche del percorso non ancora disponibili'
           }
-          style={styles.routeStatsCard}
+          style={[styles.routeStatsCard, isDarkMode && styles.mapHeaderCardDark]}
         >
           <View style={styles.routeStat}>
             <View style={styles.routeStatHeading}>
               <MaterialCommunityIcons name="map" color="#94A3B8" size={12} />
               <Text style={styles.routeStatLabel}>DISTANZA</Text>
             </View>
-            <Text style={styles.routeStatValue}>
+            <Text
+              style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+            >
               {routeStats
                 ? formatDistance(routeStats.distanceMeters, measurementSystem)
                 : measurementSystem === 'imperial'
@@ -706,7 +726,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
               <MaterialCommunityIcons name="chart-line" color="#059669" size={12} />
               <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
             </View>
-            <Text style={styles.routeStatValue}>
+            <Text
+              style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+            >
               {routeStats
                 ? formatElevation(routeStats.ascentMeters, measurementSystem)
                 : measurementSystem === 'imperial'
@@ -720,7 +742,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
               <MaterialCommunityIcons name="clock-outline" color="#94A3B8" size={12} />
               <Text style={styles.routeStatLabel}>TEMPO</Text>
             </View>
-            <Text style={styles.routeStatValue}>
+            <Text
+              style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+            >
               {routeStats?.durationSeconds === null || !routeStats
                 ? '—'
                 : formatDuration(routeStats.durationSeconds)}
@@ -737,6 +761,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           disabled={isCenteringOnLocation}
           style={({pressed}) => [
             styles.quickControlButton,
+            isDarkMode && styles.quickControlButtonDark,
             pressed && styles.controlPressed,
             isCenteringOnLocation && styles.controlDisabled,
           ]}
@@ -753,6 +778,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           accessibilityLabel="Visuale tridimensionale"
           style={({pressed}) => [
             styles.quickControlButton,
+            isDarkMode && styles.quickControlButtonDark,
             is3DEnabled && styles.quickControlButtonActive,
             pressed && styles.controlPressed,
           ]}
@@ -772,6 +798,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       <Animated.View
         style={[
           styles.actionSheet,
+          isDarkMode && styles.actionSheetDark,
           {transform: [{translateY: actionSheetTranslateY}]},
         ]}
         onLayout={handleActionSheetLayout}
@@ -782,7 +809,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             accessibilityRole="adjustable"
             style={styles.sheetDragArea}
           >
-            <View style={styles.sheetHandle} />
+            <View style={[styles.sheetHandle, isDarkMode && styles.sheetHandleDark]} />
           </View>
 
           <View style={styles.sheetButtonRow}>
@@ -931,7 +958,13 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         onRequestClose={closeTerrainDetails}
       >
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, styles.terrainModalCard]}>
+          <View
+            style={[
+              styles.modalCard,
+              styles.terrainModalCard,
+              isDarkMode && styles.modalCardDark,
+            ]}
+          >
             <Text style={styles.modalTitle}>Tipo di terreno</Text>
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -955,7 +988,13 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         onRequestClose={closeElevationProfile}
       >
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, styles.elevationModalCard]}>
+          <View
+            style={[
+              styles.modalCard,
+              styles.elevationModalCard,
+              isDarkMode && styles.modalCardDark,
+            ]}
+          >
             <Text style={styles.modalTitle}>Profilo altimetrico</Text>
             {elevationProfile && (
               <ElevationProfile profile={elevationProfile} />
@@ -974,7 +1013,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         onRequestClose={closeSaveRouteModal}
       >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, isDarkMode && styles.modalCardDark]}>
             <Text style={styles.modalTitle}>Nome del percorso</Text>
             <TextInput
               style={styles.routeNameInput}

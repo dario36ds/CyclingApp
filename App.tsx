@@ -1,12 +1,17 @@
 import React from 'react';
 import type {PropsWithChildren} from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  NavigationContainer,
+} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import {GluestackUIProvider} from '@/src/components/ui/gluestack-ui-provider';
 import {TabBarIcon} from './src/components/TabBarIcon';
 import {HapticFeedbackProvider} from './src/context/HapticFeedbackContext';
 import {MapPreferencesProvider} from './src/context/MapPreferencesContext';
+import {ThemeProvider, useTheme} from './src/context/ThemeContext';
 import type {RootTabParamList} from './src/navigation/types';
 import {MapScreen} from './src/screens/MapScreen';
 import {SavedRoutesScreen} from './src/screens/SavedRoutesScreen';
@@ -43,14 +48,29 @@ function AppProviders({children}: PropsWithChildren) {
 
 function App() {
   return (
-    <GluestackUIProvider mode="light">
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
+  const {isDarkMode} = useTheme();
+
+  return (
+    <GluestackUIProvider mode={isDarkMode ? 'dark' : 'light'}>
       <AppProviders>
-        <NavigationContainer>
+        <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
           <Tab.Navigator
             screenOptions={{
               headerShadowVisible: false,
-              headerStyle: {backgroundColor: '#FFFFFF'},
-              headerTitleStyle: {color: '#0F172A', fontWeight: '700'},
+              headerStyle: {
+                backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+              },
+              headerTitleStyle: {
+                color: isDarkMode ? '#F8FAFC' : '#0F172A',
+                fontWeight: '700',
+              },
               tabBarActiveTintColor: '#059669',
               tabBarInactiveTintColor: '#94A3B8',
               tabBarHideOnKeyboard: true,
@@ -61,8 +81,8 @@ function App() {
                 fontWeight: '600',
               },
               tabBarStyle: {
-                backgroundColor: '#FFFFFF',
-                borderTopColor: '#E2E8F0',
+                backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+                borderTopColor: isDarkMode ? '#334155' : '#E2E8F0',
                 borderTopWidth: 1,
                 height: 68,
                 paddingBottom: 8,
