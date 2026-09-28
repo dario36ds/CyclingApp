@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -20,7 +21,11 @@ import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
 import {useTheme} from '../context/ThemeContext';
 import type {RootTabParamList} from '../navigation/types';
-import {deleteSavedRoute, getSavedRoutes} from '../services/savedRoutesService';
+import {
+  deleteSavedRoute,
+  getSavedRoutes,
+  renameSavedRoute,
+} from '../services/savedRoutesService';
 import type {SavedRoute} from '../types/route';
 import {
   formatDistance,
@@ -38,7 +43,7 @@ const dateFormatter = new Intl.DateTimeFormat('it-IT', {
   minute: '2-digit',
 });
 
-type RouteFilter = 'all' | 'recent' | 'long';
+type RouteFilter = 'elevation' | 'long';
 
 type SavedRoutesScreenProps = BottomTabScreenProps<
   RootTabParamList,
@@ -72,7 +77,7 @@ function formatWaypointCount(count: number) {
     return '1 punto del percorso';
   }
 
-  return count > 2 ? `${count} waypoint` : `${count} punti del percorso`;
+  return `${count} waypoint`;
 }
 
 export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
@@ -83,9 +88,12 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingRouteId, setDeletingRouteId] = useState<string | null>(null);
+  const [renamingRoute, setRenamingRoute] = useState<SavedRoute | null>(null);
+  const [renamedRouteName, setRenamedRouteName] = useState('');
+  const [isRenamingRoute, setIsRenamingRoute] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<RouteFilter>('all');
+  const [activeFilters, setActiveFilters] = useState<RouteFilter[]>([]);
 
   const loadRoutes = useCallback(async (refreshing = false) => {
     if (refreshing) {
@@ -124,7 +132,6 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
 
   const filteredRoutes = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase('it-IT');
-    const recentThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     return routes.filter(route => {
       const matchesQuery = route.name
@@ -135,19 +142,29 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
       if (!matchesQuery) {
         return false;
       }
-      if (activeFilter === 'recent') {
-        return new Date(route.createdAt).getTime() >= recentThreshold;
+      if (
+        activeFilters.includes('elevation') &&
+        (routeStats?.ascentMeters ?? 0) <= 1_000
+      ) {
+        return false;
       }
-      if (activeFilter === 'long') {
-        return (routeStats?.distanceMeters ?? 0) > 50_000;
+      if (
+        activeFilters.includes('long') &&
+        (routeStats?.distanceMeters ?? 0) <= 50_000
+      ) {
+        return false;
       }
       return true;
     });
-  }, [activeFilter, routes, searchQuery]);
+  }, [activeFilters, routes, searchQuery]);
 
   const selectFilter = (filter: RouteFilter) => {
     triggerHaptic('selection');
-    setActiveFilter(filter);
+    setActiveFilters(current =>
+      current.includes(filter)
+        ? current.filter(activeFilter => activeFilter !== filter)
+        : [...current, filter],
+    );
   };
 
   const confirmDeleteRoute = (routeToDelete: SavedRoute) => {
@@ -188,6 +205,49 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
   const openRoute = (routeToOpen: SavedRoute) => {
     triggerHaptic('selection');
     navigation.navigate('Map', {savedRoute: routeToOpen});
+  };
+
+  const openRenameRoute = (routeToRename: SavedRoute) => {
+    triggerHaptic('selection');
+    setRenamedRouteName(routeToRename.name);
+    setRenamingRoute(routeToRename);
+  };
+
+  const closeRenameRoute = () => {
+    if (!isRenamingRoute) {
+      setRenamingRoute(null);
+      setRenamedRouteName('');
+    }
+  };
+
+  const handleRenameRoute = async () => {
+    const trimmedName = renamedRouteName.trim();
+
+    if (!renamingRoute || !trimmedName || isRenamingRoute) {
+      return;
+    }
+
+    setIsRenamingRoute(true);
+    try {
+      await renameSavedRoute(renamingRoute.id, trimmedName);
+      setRoutes(currentRoutes =>
+        currentRoutes.map(route =>
+          route.id === renamingRoute.id ? {...route, name: trimmedName} : route,
+        ),
+      );
+      triggerHaptic('notificationSuccess');
+      setRenamingRoute(null);
+      setRenamedRouteName('');
+    } catch (error: unknown) {
+      triggerHaptic('notificationError');
+      const message = error instanceof Error ? error.message : 'Errore sconosciuto.';
+      Alert.alert(
+        'Rinomina non riuscita',
+        `Non è stato possibile rinominare il percorso.\n\nDettaglio: ${message}`,
+      );
+    } finally {
+      setIsRenamingRoute(false);
+    }
   };
 
   const createRoute = () => {
@@ -251,7 +311,6 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
             returnKeyType="search"
             onChangeText={setSearchQuery}
           />
-          <MaterialCommunityIcons name="tune-variant" color="#94A3B8" size={17} />
         </View>
 
         <ScrollView
@@ -261,19 +320,17 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
           contentContainerStyle={styles.filters}
         >
           <FilterChip
-            active={activeFilter === 'all'}
-            label={`Tutti (${routes.length})`}
-            onPress={() => selectFilter('all')}
-          />
-          <FilterChip
-            active={activeFilter === 'recent'}
-            label="Recenti"
-            onPress={() => selectFilter('recent')}
-          />
-          <FilterChip
-            active={activeFilter === 'long'}
+            active={activeFilters.includes('long')}
             label={`Lunghi (>${formatDistance(50_000, measurementSystem)})`}
             onPress={() => selectFilter('long')}
+          />
+          <FilterChip
+            active={activeFilters.includes('elevation')}
+            label={`Dislivello (>${formatElevation(
+              1_000,
+              measurementSystem,
+            )})`}
+            onPress={() => selectFilter('elevation')}
           />
         </ScrollView>
       </View>
@@ -397,11 +454,31 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
                       styles.waypointCount,
                       isDarkMode && styles.secondaryTextDark,
                     ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {formatWaypointCount(item.waypoints.length)}
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
+                  <Pressable
+                    cssInterop={false}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Rinomina il percorso ${item.name}`}
+                    hitSlop={8}
+                    style={({pressed}) => [
+                      styles.renameButton,
+                      pressed && styles.renameButtonPressed,
+                    ]}
+                    onPress={() => openRenameRoute(item)}
+                  >
+                    <MaterialCommunityIcons
+                      name="pencil-outline"
+                      color="#0369A1"
+                      size={13}
+                    />
+                    <Text style={styles.renameButtonText}>Rinomina</Text>
+                  </Pressable>
                   <Pressable
                     cssInterop={false}
                     accessibilityRole="button"
@@ -460,7 +537,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
             <Text style={[styles.emptyTitle, isDarkMode && styles.primaryTextDark]}>
               {errorMessage
                 ? 'Qualcosa è andato storto'
-                : searchQuery || activeFilter !== 'all'
+                : searchQuery || activeFilters.length > 0
                 ? 'Nessun percorso trovato'
                 : 'Nessun percorso salvato'}
             </Text>
@@ -472,7 +549,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
             >
               {errorMessage
                 ? errorMessage
-                : searchQuery || activeFilter !== 'all'
+                : searchQuery || activeFilters.length > 0
                 ? 'Prova a modificare la ricerca o il filtro selezionato.'
                 : 'Crea un percorso sulla mappa e salvalo: lo ritroverai qui.'}
             </Text>
@@ -480,6 +557,60 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
         }
        
       />
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={renamingRoute !== null}
+        onRequestClose={closeRenameRoute}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.renameModal, isDarkMode && styles.renameModalDark]}>
+            <Text style={[styles.renameModalTitle, isDarkMode && styles.primaryTextDark]}>
+              Rinomina percorso
+            </Text>
+            <TextInput
+              accessibilityLabel="Nuovo nome del percorso"
+              style={[styles.renameInput, isDarkMode && styles.renameInputDark]}
+              value={renamedRouteName}
+              onChangeText={setRenamedRouteName}
+              placeholder="Nome del percorso"
+              placeholderTextColor={isDarkMode ? '#94A3B8' : '#64748B'}
+              autoFocus
+              maxLength={80}
+              returnKeyType="done"
+              onSubmitEditing={handleRenameRoute}
+            />
+            <View style={styles.renameActions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isRenamingRoute}
+                style={styles.renameCancelButton}
+                onPress={closeRenameRoute}
+              >
+                <Text style={[styles.renameCancelText, isDarkMode && styles.secondaryTextDark]}>
+                  Annulla
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!renamedRouteName.trim() || isRenamingRoute}
+                style={({pressed}) => [
+                  styles.renameConfirmButton,
+                  (!renamedRouteName.trim() || isRenamingRoute) &&
+                    styles.renameButtonDisabled,
+                  pressed && styles.renameConfirmButtonPressed,
+                ]}
+                onPress={handleRenameRoute}
+              >
+                <Text style={styles.renameConfirmText}>
+                  {isRenamingRoute ? 'Salvataggio...' : 'Salva'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -834,6 +965,23 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   cardActions: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  renameButton: {
+    height: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+  },
+  renameButtonPressed: {backgroundColor: '#DBEAFE', transform: [{scale: 0.97}]},
+  renameButtonText: {
+    color: '#0369A1',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+  },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -904,4 +1052,55 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   syncText: {color: '#94A3B8', fontSize: 12, lineHeight: 16, flexShrink: 1},
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  renameModal: {
+    gap: 16,
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  renameModalDark: {backgroundColor: '#1E293B'},
+  renameModalTitle: {color: '#0F172A', fontSize: 20, fontWeight: '700'},
+  renameInput: {
+    height: 48,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    color: '#0F172A',
+    fontSize: 16,
+    backgroundColor: '#F8FAFC',
+  },
+  renameInputDark: {
+    borderColor: '#475569',
+    color: '#F8FAFC',
+    backgroundColor: '#0F172A',
+  },
+  renameActions: {flexDirection: 'row', gap: 12},
+  renameCancelButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+  },
+  renameCancelText: {color: '#334155', fontSize: 14, fontWeight: '700'},
+  renameConfirmButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#059669',
+  },
+  renameConfirmButtonPressed: {backgroundColor: '#047857'},
+  renameButtonDisabled: {opacity: 0.5},
+  renameConfirmText: {color: '#FFFFFF', fontSize: 14, fontWeight: '700'},
 });

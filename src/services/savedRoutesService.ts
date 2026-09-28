@@ -32,6 +32,20 @@ export async function deleteSavedRoute(routeId: string): Promise<void> {
   );
 }
 
+export async function renameSavedRoute(
+  routeId: string,
+  name: string,
+): Promise<void> {
+  const savedRoutes = await getSavedRoutes();
+
+  await routeStorage.setItem(
+    SAVED_ROUTES_KEY,
+    JSON.stringify(
+      savedRoutes.map(route => (route.id === routeId ? {...route, name} : route)),
+    ),
+  );
+}
+
 export async function saveRoute({
   name,
   waypoints,

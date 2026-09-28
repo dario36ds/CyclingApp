@@ -96,9 +96,6 @@ export function SettingsScreen() {
         <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>
           Impostazioni
         </Text>
-        <View style={styles.headerIcon}>
-          <MaterialCommunityIcons name="tune-variant" color="#64748B" size={17} />
-        </View>
       </View>
 
       <ScrollView
