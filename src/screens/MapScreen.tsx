@@ -1014,13 +1014,20 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       >
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, isDarkMode && styles.modalCardDark]}>
-            <Text style={styles.modalTitle}>Nome del percorso</Text>
+            <Text
+              style={[styles.modalTitle, isDarkMode && styles.primaryTextDark]}
+            >
+              Nome del percorso
+            </Text>
             <TextInput
-              style={styles.routeNameInput}
+              style={[
+                styles.routeNameInput,
+                isDarkMode && styles.routeNameInputDark,
+              ]}
               value={routeName}
               onChangeText={setRouteName}
               placeholder="Es. Giro del lago"
-              placeholderTextColor="#71717A"
+              placeholderTextColor={isDarkMode ? '#94A3B8' : '#71717A'}
               autoFocus
               maxLength={80}
               returnKeyType="done"
