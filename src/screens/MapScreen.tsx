@@ -62,7 +62,7 @@ type MapPressEvent = NativeSyntheticEvent<{
 type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
 
 const STREET_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
-const TUSCANY_CENTER: Coordinate = [11.25, 43.77];
+const ITALY_CENTER: Coordinate = [12.5674, 41.8719];
 const LOCATION_TIMEOUT_MS = 12_000;
 const COLLAPSED_SHEET_HEIGHT = 44;
 
@@ -483,7 +483,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
 
   const getMapFocusCoordinate = (): Coordinate => {
     if (waypoints.length === 0) {
-      return TUSCANY_CENTER;
+      return ITALY_CENTER;
     }
 
     const [longitudeSum, latitudeSum] = waypoints.reduce(
@@ -574,8 +574,8 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         <Camera
           ref={cameraRef}
           initialViewState={{
-            center: TUSCANY_CENTER,
-            zoom: 8.4,
+            center: ITALY_CENTER,
+            zoom: 4.5,
           }}
         />
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -57,6 +58,20 @@ export function SettingsScreen() {
   const selectMeasurementSystem = (system: 'metric' | 'imperial') => {
     setMeasurementSystem(system);
     triggerHaptic('selection');
+  };
+
+  const openMapLibreWebsite = () => {
+    triggerHaptic('selection');
+    Linking.openURL('https://maplibre.org/').catch(error =>
+      console.error('Impossibile aprire il sito di MapLibre:', error),
+    );
+  };
+
+  const openOrsWebsite = () => {
+    triggerHaptic('selection');
+    Linking.openURL('https://openrouteservice.org/').catch(error =>
+      console.error('Impossibile aprire il sito di openrouteservice:', error),
+    );
   };
 
   return (
@@ -196,7 +211,12 @@ export function SettingsScreen() {
         <View style={styles.section}>
           <SectionTitle>INFO &amp; SUPPORTO</SectionTitle>
           <View style={styles.card}>
-            <View style={styles.settingRowCenter}>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Apri il sito di MapLibre"
+              style={styles.settingRowCenter}
+              onPress={openMapLibreWebsite}
+            >
               <SettingIcon
                 name="web"
                 color="#9333EA"
@@ -216,22 +236,34 @@ export function SettingsScreen() {
                 color="#94A3B8"
                 size={17}
               />
-            </View>
+            </Pressable>
 
             <View style={styles.divider} />
 
-            <View style={styles.settingRowCenter}>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Apri il sito di openrouteservice"
+              style={styles.settingRowCenter}
+              onPress={openOrsWebsite}
+            >
               <SettingIcon
-                name="shield-outline"
-                color="#475569"
-                backgroundColor="#F1F5F9"
-                borderColor="#E2E8F0"
+                name="routes"
+                color="#2563EB"
+                backgroundColor="#EFF6FF"
+                borderColor="#DBEAFE"
               />
-              <Text style={[styles.settingTitle, styles.versionTitle]}>
-                Versione applicazione
-              </Text>
-              <Text style={styles.versionBadge}>v2.4.0 (26.5)</Text>
-            </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>Calcolo percorsi</Text>
+                <Text style={styles.infoDescription}>
+                  OpenRouteService (ORS)
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name="export-variant"
+                color="#94A3B8"
+                size={17}
+              />
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -343,16 +375,4 @@ const styles = StyleSheet.create({
   },
   segmentText: {color: '#64748B', fontSize: 12, fontWeight: '600'},
   segmentTextActive: {color: '#0F172A'},
-  versionTitle: {flex: 1},
-  versionBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    color: '#64748B',
-    fontSize: 11,
-    fontWeight: '600',
-    backgroundColor: '#F1F5F9',
-  },
 });
