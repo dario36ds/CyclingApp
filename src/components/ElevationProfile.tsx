@@ -10,6 +10,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import type {ElevationProfileData} from '../utils/routeStats';
+import {useMapPreferences} from '../context/MapPreferencesContext';
 import {formatDistance, formatElevation} from '../utils/routeStats';
 
 type ElevationProfileProps = {
@@ -42,6 +43,7 @@ function samplePoints(profile: ElevationProfileData) {
 }
 
 export function ElevationProfile({profile}: ElevationProfileProps) {
+  const {measurementSystem} = useMapPreferences();
   const plotWidth = CHART_WIDTH - PLOT_LEFT - PLOT_RIGHT;
   const plotHeight = CHART_HEIGHT - PLOT_TOP - PLOT_BOTTOM;
   const elevationRange = Math.max(
@@ -76,20 +78,24 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
       accessible
       accessibilityLabel={`Profilo altimetrico, quota minima ${formatElevation(
         profile.minElevationMeters,
-      )}, quota massima ${formatElevation(profile.maxElevationMeters)}`}
+        measurementSystem,
+      )}, quota massima ${formatElevation(
+        profile.maxElevationMeters,
+        measurementSystem,
+      )}`}
     >
       <View style={styles.summary}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>QUOTA MINIMA</Text>
           <Text style={styles.summaryValue}>
-            {formatElevation(profile.minElevationMeters)}
+            {formatElevation(profile.minElevationMeters, measurementSystem)}
           </Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={styles.summaryLabel}>QUOTA MASSIMA</Text>
           <Text style={styles.summaryValue}>
-            {formatElevation(profile.maxElevationMeters)}
+            {formatElevation(profile.maxElevationMeters, measurementSystem)}
           </Text>
         </View>
       </View>
@@ -139,7 +145,7 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
             fontSize={9}
             textAnchor="end"
           >
-            {Math.round(chartMaxElevation)} m
+            {formatElevation(chartMaxElevation, measurementSystem)}
           </SvgText>
           <SvgText
             x={PLOT_LEFT - 6}
@@ -148,7 +154,7 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
             fontSize={9}
             textAnchor="end"
           >
-            {Math.round(middleElevation)} m
+            {formatElevation(middleElevation, measurementSystem)}
           </SvgText>
           <SvgText
             x={PLOT_LEFT - 6}
@@ -157,7 +163,7 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
             fontSize={9}
             textAnchor="end"
           >
-            {Math.round(chartMinElevation)} m
+            {formatElevation(chartMinElevation, measurementSystem)}
           </SvgText>
 
           <SvgText
@@ -176,7 +182,7 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
             fontSize={9}
             textAnchor="middle"
           >
-            {formatDistance(profile.distanceMeters / 2)}
+            {formatDistance(profile.distanceMeters / 2, measurementSystem)}
           </SvgText>
           <SvgText
             x={CHART_WIDTH - PLOT_RIGHT}
@@ -185,7 +191,7 @@ export function ElevationProfile({profile}: ElevationProfileProps) {
             fontSize={9}
             textAnchor="end"
           >
-            {formatDistance(profile.distanceMeters)}
+            {formatDistance(profile.distanceMeters, measurementSystem)}
           </SvgText>
         </Svg>
       </View>

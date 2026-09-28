@@ -1,3 +1,5 @@
+import type {MeasurementSystem} from '../types/measurement';
+
 type RouteSummary = {
   distance?: number;
   ascent?: number;
@@ -323,7 +325,23 @@ export function getRouteTerrainDetails(
   };
 }
 
-export function formatDistance(distanceMeters: number) {
+export function formatDistance(
+  distanceMeters: number,
+  measurementSystem: MeasurementSystem = 'metric',
+) {
+  if (measurementSystem === 'imperial') {
+    const distanceFeet = distanceMeters * 3.28084;
+
+    if (distanceFeet < 528) {
+      return `${Math.round(distanceFeet)} ft`;
+    }
+
+    return `${(distanceMeters / 1609.344).toLocaleString('it-IT', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} mi`;
+  }
+
   if (distanceMeters < 1000) {
     return `${Math.round(distanceMeters)} m`;
   }
@@ -334,7 +352,14 @@ export function formatDistance(distanceMeters: number) {
   })} km`;
 }
 
-export function formatElevation(ascentMeters: number) {
+export function formatElevation(
+  ascentMeters: number,
+  measurementSystem: MeasurementSystem = 'metric',
+) {
+  if (measurementSystem === 'imperial') {
+    return `${Math.round(ascentMeters * 3.28084).toLocaleString('it-IT')} ft`;
+  }
+
   return `${Math.round(ascentMeters).toLocaleString('it-IT')} m`;
 }
 

@@ -17,6 +17,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
+import {useMapPreferences} from '../context/MapPreferencesContext';
 import type {RootTabParamList} from '../navigation/types';
 import {deleteSavedRoute, getSavedRoutes} from '../services/savedRoutesService';
 import type {SavedRoute} from '../types/route';
@@ -75,6 +76,7 @@ function formatWaypointCount(count: number) {
 
 export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
   const {triggerHaptic} = useHapticFeedback();
+  const {measurementSystem} = useMapPreferences();
   const [routes, setRoutes] = useState<SavedRoute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -261,7 +263,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
           />
           <FilterChip
             active={activeFilter === 'long'}
-            label="Lunghi (>50 km)"
+            label={`Lunghi (>${formatDistance(50_000, measurementSystem)})`}
             onPress={() => selectFilter('long')}
           />
         </ScrollView>
@@ -286,10 +288,10 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
           const routeStats = getRouteStats(item.geoJson);
           const routeCategory = getRouteCategory(item);
           const distance = routeStats
-            ? formatDistance(routeStats.distanceMeters)
+            ? formatDistance(routeStats.distanceMeters, measurementSystem)
             : '—';
           const elevation = routeStats
-            ? formatElevation(routeStats.ascentMeters)
+            ? formatElevation(routeStats.ascentMeters, measurementSystem)
             : '—';
           const duration =
             routeStats && routeStats.durationSeconds !== null
@@ -511,13 +513,13 @@ function MetricValue({value}: {value: string}) {
   return (
     <Text style={styles.routeStatValue}>
       {parts.map((part, index) => {
-        const isUnit = /^(km|m|h|min)$/.test(part);
+        const isUnit = /^(km|m|mi|ft|h|min)$/.test(part);
         const displayedPart =
           part === 'h'
             ? 'h '
             : part === 'min'
             ? 'm'
-            : part === 'km' || part === 'm'
+            : /^(km|m|mi|ft)$/.test(part)
             ? ` ${part}`
             : part;
 

@@ -129,8 +129,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const actionSheetOffsetY = useRef(0);
   const isActionSheetCollapsed = useRef(false);
   const insets = useSafeAreaInsets();
-  const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
-    useMapPreferences();
+  const {
+    isSatelliteViewEnabled,
+    setSatelliteViewEnabled,
+    measurementSystem,
+  } = useMapPreferences();
   const {triggerHaptic} = useHapticFeedback();
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [nextWaypointId, setNextWaypointId] = useState(0);
@@ -675,8 +678,10 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             routeStats
               ? `Distanza ${formatDistance(
                   routeStats.distanceMeters,
+                  measurementSystem,
                 )}, dislivello positivo ${formatElevation(
                   routeStats.ascentMeters,
+                  measurementSystem,
                 )}`
               : 'Statistiche del percorso non ancora disponibili'
           }
@@ -689,7 +694,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             </View>
             <Text style={styles.routeStatValue}>
               {routeStats
-                ? formatDistance(routeStats.distanceMeters)
+                ? formatDistance(routeStats.distanceMeters, measurementSystem)
+                : measurementSystem === 'imperial'
+                ? '— mi'
                 : '— km'}
             </Text>
           </View>
@@ -701,7 +708,9 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             </View>
             <Text style={styles.routeStatValue}>
               {routeStats
-                ? formatElevation(routeStats.ascentMeters)
+                ? formatElevation(routeStats.ascentMeters, measurementSystem)
+                : measurementSystem === 'imperial'
+                ? '— ft'
                 : '— m'}
             </Text>
           </View>

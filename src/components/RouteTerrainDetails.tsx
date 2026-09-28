@@ -5,6 +5,7 @@ import type {
   RouteBreakdownItem,
   RouteTerrainDetails as RouteTerrainDetailsData,
 } from '../utils/routeStats';
+import {useMapPreferences} from '../context/MapPreferencesContext';
 import {formatDistance} from '../utils/routeStats';
 
 type RouteTerrainDetailsProps = {
@@ -18,13 +19,15 @@ function formatPercentage(percentage: number) {
 }
 
 function BreakdownRow({item}: {item: RouteBreakdownItem}) {
+  const {measurementSystem} = useMapPreferences();
+
   return (
     <View style={styles.breakdownRow}>
       <View style={styles.breakdownHeader}>
         <Text style={styles.breakdownLabel}>{item.label}</Text>
         <Text style={styles.breakdownValue}>
           {formatPercentage(item.percentage)} ·{' '}
-          {formatDistance(item.distanceMeters)}
+          {formatDistance(item.distanceMeters, measurementSystem)}
         </Text>
       </View>
       <View style={styles.progressTrack}>

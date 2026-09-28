@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
   Pressable,
   ScrollView,
@@ -38,17 +38,17 @@ function SectionTitle({children}: {children: React.ReactNode}) {
 }
 
 export function SettingsScreen() {
-  const {isSatelliteViewEnabled, setSatelliteViewEnabled} =
-    useMapPreferences();
+  const {
+    isSatelliteViewEnabled,
+    setSatelliteViewEnabled,
+    measurementSystem,
+    setMeasurementSystem,
+  } = useMapPreferences();
   const {
     isHapticFeedbackEnabled,
     setHapticFeedbackEnabled,
     triggerHaptic,
   } = useHapticFeedback();
-  const [measurementSystem, setMeasurementSystem] = useState<
-    'metric' | 'imperial'
-  >('metric');
-
   const handleSatelliteViewChange = (enabled: boolean) => {
     triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
     setSatelliteViewEnabled(enabled);
