@@ -299,10 +299,23 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   };
 
   const clearWaypoints = () => {
-    triggerHaptic('impactMedium');
-    setWaypoints([]);
-    setSelectedWaypointId(null);
-    setRoute(null);
+    Alert.alert(
+      'Cancellare tutti i waypoint?',
+      'Questa azione rimuoverà tutti i waypoint e il percorso calcolato.',
+      [
+        {text: 'Annulla', style: 'cancel'},
+        {
+          text: 'Cancella',
+          style: 'destructive',
+          onPress: () => {
+            triggerHaptic('impactMedium');
+            setWaypoints([]);
+            setSelectedWaypointId(null);
+            setRoute(null);
+          },
+        },
+      ],
+    );
   };
 
   const handleCalculateRoute = async () => {
