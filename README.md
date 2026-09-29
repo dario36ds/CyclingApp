@@ -1,97 +1,107 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# CyclingApp
 
-# Getting Started
+App React Native per creare percorsi in bicicletta su una mappa. Puoi aggiungere e riordinare i punti del percorso, calcolare il tragitto, vedere distanza, durata stimata, dislivello e tipo di superficie, e salvare i percorsi sul dispositivo. Sono disponibili mappa stradale e vista satellitare, tema chiaro/scuro e unità metriche o imperiali.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Requisiti
 
-## Step 1: Start Metro
+- Node.js **22.11 o successivo** e npm.
+- Per iOS: macOS, Xcode con un simulatore iOS e CocoaPods (`pod`).
+- Per Android: Android Studio, Android SDK e un emulatore avviato oppure un dispositivo con debug USB. Il progetto configura `compileSdkVersion` 37, Build Tools 37.0.0 e NDK 27.1.12297006 in `android/build.gradle`.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+Dalla cartella principale del progetto installa le dipendenze JavaScript:
 
 ```sh
-# Using npm
+npm install
+```
+
+Il progetto include `package-lock.json`. Puoi usare `npm ci` al posto di `npm install` per un'installazione pulita con le versioni esatte del lockfile: elimina prima `node_modules` e non modifica il lockfile. `npm install` è il comando abituale durante lo sviluppo e può aggiornare `package-lock.json` se le dipendenze cambiano. Se hai già installato le dipendenze e non sono cambiate, non devi ripetere il comando.
+
+## Configurazione della chiave API
+
+L'unica variabile richiesta dal codice è `ORS_API_KEY`, usata per calcolare i percorsi con OpenRouteService. Accedi alla pagina [HeiGIT Account → API Keys](https://account.heigit.org/manage/key) per ottenere la tua chiave ORS, poi crea il file `.env` nella cartella principale:
+
+```sh
+cp .env.example .env
+```
+
+Inserisci la chiave nel file, su una sola riga:
+
+```dotenv
+ORS_API_KEY=la_tua_chiave_openrouteservice
+```
+
+`react-native-config` legge `.env` durante la compilazione nativa. Dopo aver aggiunto o cambiato la chiave, **ricompila l'app**; il solo riavvio di Metro non aggiorna il valore. Se la chiave manca, la mappa si apre comunque, ma il calcolo del percorso mostra un avviso.
+
+Le mappe stradali e satellitari configurate nel progetto non richiedono altre variabili in `.env`.
+
+## Avvio su iOS
+
+Installa i pod la prima volta, dopo una nuova installazione delle dipendenze JavaScript o quando cambiano le dipendenze native:
+
+```sh
+cd ios
+pod install
+cd ..
+```
+
+Avvia Metro in un terminale:
+
+```sh
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+In un secondo terminale, dalla cartella principale, compila e avvia l'app sul simulatore iOS:
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+La CLI usa il simulatore disponibile. Per un iPhone fisico, collega il dispositivo e usa `npm run ios -- --device` oppure passa `--udid` alla CLI; la firma iOS deve essere configurata in Xcode. Puoi aprire `ios/CyclingApp.xcworkspace` in Xcode per scegliere un simulatore o un dispositivo specifico.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Se Xcode segnala che manca `Pods-CyclingApp.debug.xcconfig` o un file in `Pods/Target Support Files`, esegui di nuovo `pod install` dalla cartella `ios`.
 
-## Step 3: Modify your app
+## Avvio su Android
 
-Now that you have successfully run the app, let's make changes!
+Assicurati che Gradle trovi l'Android SDK: imposta `ANDROID_HOME` sul percorso dell'SDK oppure crea `android/local.properties` con `sdk.dir=/percorso/del/tuo/Android/Sdk` (il file è escluso da Git). Apri un emulatore da Android Studio oppure collega un dispositivo con debug USB. Avvia Metro in un terminale:
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+```sh
+npm start
+```
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+In un secondo terminale, dalla cartella principale:
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+```sh
+npm run android
+```
 
-## Congratulations! :tada:
+La configurazione Android carica `.env` tramite `react-native-config` in `android/app/build.gradle`. Se cambi `ORS_API_KEY`, esegui di nuovo `npm run android` per ricompilare l'app.
 
-You've successfully run and modified your React Native App. :partying_face:
+## Dipendenze principali
 
-### Now what?
+| Pacchetti | Ruolo nel progetto |
+| --- | --- |
+| `react`, `react-native` | Interfaccia e runtime dell'app mobile. |
+| `@maplibre/maplibre-react-native` | Mappa interattiva, livelli GeoJSON, posizione del dispositivo e vista 3D. |
+| `@react-navigation/native`, `@react-navigation/bottom-tabs`, `react-native-screens`, `react-native-safe-area-context` | Navigazione a schede e adattamento alle aree sicure dello schermo. |
+| `react-native-config` | Lettura di `ORS_API_KEY` da `.env` durante la build nativa. |
+| `@react-native-async-storage/async-storage` | Salvataggio locale dei percorsi e delle preferenze. |
+| `react-native-haptic-feedback` | Feedback tattile delle azioni. |
+| `react-native-svg`, `react-native-vector-icons` | Grafici, icone e simboli dell'interfaccia. |
+| `react-native-reanimated`, `react-native-worklets`, `@legendapp/motion` | Supporto alle animazioni. |
+| `nativewind`, `tailwind-variants`, `@gluestack-ui/core`, `@gluestack-ui/utils` | Stili e componenti dell'interfaccia. |
+| `react-aria`, `react-stately`, `@react-aria/ssr`, `@react-aria/utils`, `@expo/html-elements`, `react-dom` | Dipendenze di supporto ai componenti UI e alla compatibilità web. |
+| `@react-native/new-app-screen` | Pacchetto del template React Native, attualmente non usato direttamente dall'app. |
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Le dipendenze di sviluppo in `package.json` includono TypeScript e i tipi React per il controllo del codice, Babel e Metro per trasformazione e bundling, la CLI React Native per le build, ESLint e Prettier per lo stile del codice, Jest e React Test Renderer per i test, e Tailwind CSS con il relativo plugin Prettier per gli stili.
 
-# Troubleshooting
+## Servizi e dati usati
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+| Servizio | Utilizzo | Chiave locale |
+| --- | --- | --- |
+| [OpenRouteService](https://openrouteservice.org/) | API `cycling-road` per il calcolo del percorso in GeoJSON, inclusi dati di elevazione e superficie. | `ORS_API_KEY` |
+| [OpenFreeMap](https://openfreemap.org/) e [MapLibre](https://maplibre.org/) | Stile della mappa stradale e visualizzazione interattiva. | Nessuna |
+| [Esri World Imagery](https://www.esri.com/en-us/arcgis/products/arcgis-living-atlas) | Immagini satellitari e livello delle etichette nella vista ibrida. | Nessuna variabile configurata |
+| Posizione del dispositivo | Centra la mappa sulla posizione corrente, dopo il consenso dell'utente. | Nessuna |
+| AsyncStorage sul dispositivo | Conserva percorsi salvati, tema, unità di misura e preferenze della mappa. | Nessuna |
 
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+I percorsi rimangono salvati sul dispositivo.
