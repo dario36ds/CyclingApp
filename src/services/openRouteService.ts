@@ -5,9 +5,13 @@ type Coordinate = [number, number];
 const DIRECTIONS_URL =
   'https://api.openrouteservice.org/v2/directions/cycling-road/geojson';
 
+export class RouteCalculationError extends Error {}
+
 export async function calculateRoute(coordinates: Coordinate[]) {
   if (!Config.ORS_API_KEY) {
-    throw new Error('ORS_API_KEY non configurata');
+    throw new RouteCalculationError(
+      'Il servizio per il calcolo dei percorsi non è configurato.',
+    );
   }
 
   const response = await fetch(DIRECTIONS_URL, {
@@ -27,8 +31,25 @@ export async function calculateRoute(coordinates: Coordinate[]) {
   const responseText = await response.text();
 
   if (!response.ok) {
-    throw new Error(
-      `Errore OpenRouteService ${response.status}: ${responseText}`,
+    let errorCode: number | undefined;
+
+    try {
+      const responseData = JSON.parse(responseText) as {
+        error?: {code?: number};
+      };
+      errorCode = responseData.error?.code;
+    } catch {
+      // Il servizio può restituire una risposta non JSON.
+    }
+
+    if (errorCode === 2010) {
+      throw new RouteCalculationError(
+        'Uno dei punti selezionati è troppo lontano da una strada percorribile in bici. Spostalo su una strada e riprova.',
+      );
+    }
+
+    throw new RouteCalculationError(
+      'Non è stato possibile calcolare il percorso. Controlla i punti selezionati e riprova.',
     );
   }
 

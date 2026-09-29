@@ -38,7 +38,10 @@ import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
 import {useTheme} from '../context/ThemeContext';
 import type {RootTabParamList} from '../navigation/types';
-import {calculateRoute} from '../services/openRouteService';
+import {
+  calculateRoute,
+  RouteCalculationError,
+} from '../services/openRouteService';
 import {saveRoute} from '../services/savedRoutesService';
 import {styles} from '../styles/mapStyle';
 import type {Coordinate} from '../types/route';
@@ -336,7 +339,12 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       triggerHaptic('notificationSuccess');
     } catch (error) {
       triggerHaptic('notificationError');
-      console.error('Errore durante il calcolo del percorso:', error);
+      Alert.alert(
+        'Percorso non calcolato',
+        error instanceof RouteCalculationError
+          ? error.message
+          : 'Non è stato possibile calcolare il percorso. Controlla la connessione e riprova.',
+      );
     }
   };
 
