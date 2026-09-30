@@ -173,11 +173,12 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
       'Elimina percorso',
       `Vuoi eliminare “${routeToDelete.name}”? Questa azione non può essere annullata.`,
       [
-        {text: 'Annulla', style: 'cancel'},
+        {text: 'Annulla', style: 'cancel', onPress: () => triggerHaptic('selection')},
         {
           text: 'Elimina',
           style: 'destructive',
           onPress: async () => {
+            triggerHaptic('selection');
             setDeletingRouteId(routeToDelete.id);
             try {
               await deleteSavedRoute(routeToDelete.id);
@@ -215,6 +216,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
 
   const closeRenameRoute = () => {
     if (!isRenamingRoute) {
+      triggerHaptic('selection');
       setRenamingRoute(null);
       setRenamedRouteName('');
     }
@@ -227,6 +229,7 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
       return;
     }
 
+    triggerHaptic('selection');
     setIsRenamingRoute(true);
     try {
       await renameSavedRoute(renamingRoute.id, trimmedName);

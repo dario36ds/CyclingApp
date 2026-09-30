@@ -307,11 +307,12 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   };
 
   const clearWaypoints = () => {
+    triggerHaptic('selection');
     Alert.alert(
       'Cancellare tutti i waypoint?',
       'Questa azione rimuoverà tutti i waypoint e il percorso calcolato.',
       [
-        {text: 'Annulla', style: 'cancel'},
+        {text: 'Annulla', style: 'cancel', onPress: () => triggerHaptic('selection')},
         {
           text: 'Cancella',
           style: 'destructive',
@@ -331,6 +332,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       return;
     }
 
+    triggerHaptic('selection');
     try {
       const routeData = await calculateRoute(
         waypoints.map(waypoint => waypoint.coordinate),
@@ -447,6 +449,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
 
   const closeSaveRouteModal = () => {
     if (!isSavingRoute) {
+      triggerHaptic('selection');
       setIsSaveModalVisible(false);
     }
   };
@@ -458,6 +461,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       return;
     }
 
+    triggerHaptic('selection');
     setIsSavingRoute(true);
 
     try {
@@ -487,8 +491,8 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   };
 
   const handleSatelliteViewChange = (enabled: boolean) => {
-    triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
     setSatelliteViewEnabled(enabled);
+    triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
   };
 
   const getMapFocusCoordinate = (): Coordinate => {

@@ -9,7 +9,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import {GluestackUIProvider} from '@/src/components/ui/gluestack-ui-provider';
 import {TabBarIcon} from './src/components/TabBarIcon';
-import {HapticFeedbackProvider} from './src/context/HapticFeedbackContext';
+import {HapticFeedbackProvider, useHapticFeedback} from './src/context/HapticFeedbackContext';
 import {MapPreferencesProvider} from './src/context/MapPreferencesContext';
 import {ThemeProvider, useTheme} from './src/context/ThemeContext';
 import type {RootTabParamList} from './src/navigation/types';
@@ -49,83 +49,87 @@ function AppProviders({children}: PropsWithChildren) {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <AppProviders>
+        <AppContent />
+      </AppProviders>
     </ThemeProvider>
   );
 }
 
 function AppContent() {
   const {isDarkMode} = useTheme();
+  const {triggerHaptic} = useHapticFeedback();
 
   return (
     <GluestackUIProvider mode={isDarkMode ? 'dark' : 'light'}>
-      <AppProviders>
-        <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
-          <Tab.Navigator
-            screenOptions={{
-              headerShadowVisible: false,
-              headerStyle: {
-                backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
-              },
-              headerTitleStyle: {
-                color: isDarkMode ? '#F8FAFC' : '#0F172A',
-                fontWeight: '700',
-              },
-              tabBarActiveTintColor: '#059669',
-              tabBarInactiveTintColor: '#94A3B8',
-              tabBarHideOnKeyboard: true,
-              tabBarItemStyle: {paddingTop: 5},
-              tabBarLabelStyle: {
-                marginTop: 2,
-                fontSize: 11,
-                fontWeight: '600',
-              },
-              tabBarStyle: {
-                backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
-                borderTopColor: isDarkMode ? '#334155' : '#E2E8F0',
-                borderTopWidth: 1,
-                height: 68,
-                paddingBottom: 8,
-                shadowColor: '#0F172A',
-                shadowOffset: {width: 0, height: -4},
-                shadowOpacity: 0.05,
-                shadowRadius: 12,
-                elevation: 10,
-              },
+      <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
+        <Tab.Navigator
+          screenOptions={{
+            headerShadowVisible: false,
+            headerStyle: {
+              backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+            },
+            headerTitleStyle: {
+              color: isDarkMode ? '#F8FAFC' : '#0F172A',
+              fontWeight: '700',
+            },
+            tabBarActiveTintColor: '#059669',
+            tabBarInactiveTintColor: '#94A3B8',
+            tabBarHideOnKeyboard: true,
+            tabBarItemStyle: {paddingTop: 5},
+            tabBarLabelStyle: {
+              marginTop: 2,
+              fontSize: 11,
+              fontWeight: '600',
+            },
+            tabBarStyle: {
+              backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF',
+              borderTopColor: isDarkMode ? '#334155' : '#E2E8F0',
+              borderTopWidth: 1,
+              height: 68,
+              paddingBottom: 8,
+              shadowColor: '#0F172A',
+              shadowOffset: {width: 0, height: -4},
+              shadowOpacity: 0.05,
+              shadowRadius: 12,
+              elevation: 10,
+            },
+          }}
+        >
+          <Tab.Screen
+            name="Map"
+            component={MapScreen}
+            listeners={{tabPress: () => triggerHaptic('selection')}}
+            options={{
+              title: 'Percorso',
+              headerShown: false,
+              tabBarLabel: 'Mappa',
+              tabBarIcon: MapTabIcon,
             }}
-          >
-            <Tab.Screen
-              name="Map"
-              component={MapScreen}
-              options={{
-                title: 'Percorso',
-                headerShown: false,
-                tabBarLabel: 'Mappa',
-                tabBarIcon: MapTabIcon,
-              }}
-            />
-            <Tab.Screen
-              name="SavedRoutes"
-              component={SavedRoutesScreen}
-              options={{
-                title: 'Percorsi salvati',
-                headerShown: false,
-                tabBarLabel: 'Salvati',
-                tabBarIcon: SavedRoutesTabIcon,
-              }}
-            />
-            <Tab.Screen
-              name="Settings"
-              component={SettingsScreen}
-              options={{
-                title: 'Impostazioni',
-                headerShown: false,
-                tabBarIcon: SettingsTabIcon,
-              }}
-            />
-          </Tab.Navigator>
-        </NavigationContainer>
-      </AppProviders>
+          />
+          <Tab.Screen
+            name="SavedRoutes"
+            component={SavedRoutesScreen}
+            listeners={{tabPress: () => triggerHaptic('selection')}}
+            options={{
+              title: 'Percorsi salvati',
+              headerShown: false,
+              tabBarLabel: 'Salvati',
+              tabBarIcon: SavedRoutesTabIcon,
+            }}
+          />
+          <Tab.Screen
+            name="Settings"
+            component={SettingsScreen}
+            listeners={{tabPress: () => triggerHaptic('selection')}}
+            options={{
+              title: 'Impostazioni',
+              headerShown: false,
+              tabBarIcon: SettingsTabIcon,
+            }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
     </GluestackUIProvider>
   );
 }
