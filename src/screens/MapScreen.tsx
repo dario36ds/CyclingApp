@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   Alert,
   Modal,
   NativeSyntheticEvent,
-  PanResponder,
   Pressable,
   ScrollView,
   Switch,
@@ -29,19 +29,19 @@ import type {
 } from '@maplibre/maplibre-react-native';
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useReducedMotion} from 'react-native-reanimated';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {ElevationProfile} from '../components/ElevationProfile';
 import {RouteTerrainDetails} from '../components/RouteTerrainDetails';
+import {WaypointControls} from '../components/WaypointControls';
 import {Button, ButtonText} from '../components/ui/button';
 import {useHapticFeedback} from '../context/HapticFeedbackContext';
 import {useMapPreferences} from '../context/MapPreferencesContext';
 import {useTheme} from '../context/ThemeContext';
+import {useRouteDraft} from '../hooks/useRouteDraft';
+import {useWaypointSheet} from '../hooks/useWaypointSheet';
 import type {RootTabParamList} from '../navigation/types';
-import {
-  calculateRoute,
-  RouteCalculationError,
-} from '../services/openRouteService';
 import {saveRoute} from '../services/savedRoutesService';
 import {styles} from '../styles/mapStyle';
 import type {Coordinate} from '../types/route';
@@ -54,11 +54,6 @@ import {
   getRouteStats,
 } from '../utils/routeStats';
 
-type Waypoint = {
-  id: number;
-  coordinate: Coordinate;
-};
-
 type MapPressEvent = NativeSyntheticEvent<{
   lngLat: Coordinate;
 }>;
@@ -68,7 +63,6 @@ type MapScreenProps = BottomTabScreenProps<RootTabParamList, 'Map'>;
 const STREET_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const ITALY_CENTER: Coordinate = [12.5674, 41.8719];
 const LOCATION_TIMEOUT_MS = 12_000;
-const COLLAPSED_SHEET_HEIGHT = 44;
 
 const HYBRID_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -128,10 +122,13 @@ function getCurrentDevicePosition() {
 
 export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) {
   const cameraRef = useRef<CameraRef>(null);
-  const actionSheetTranslateY = useRef(new Animated.Value(0)).current;
-  const actionSheetHeight = useRef(0);
-  const actionSheetOffsetY = useRef(0);
-  const isActionSheetCollapsed = useRef(false);
+  const pendingCameraFit = useRef<Coordinate[] | null>(null);
+  const isMapReady = useRef(false);
+  const viewportHeight = useRef(0);
+  const savingRoute = useRef(false);
+  const reduceMotion = useReducedMotion();
+  const sheet = useWaypointSheet(reduceMotion);
+  const {getVisibleHeight} = sheet;
   const insets = useSafeAreaInsets();
   const {
     isSatelliteViewEnabled,
@@ -140,11 +137,27 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   } = useMapPreferences();
   const {triggerHaptic} = useHapticFeedback();
   const {isDarkMode} = useTheme();
-  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
-  const [nextWaypointId, setNextWaypointId] = useState(0);
-  const [selectedWaypointId, setSelectedWaypointId] = useState<number | null>(
-    null,
-  );
+  const {
+    waypoints,
+    selectedId,
+    draggingId,
+    relocatingId,
+    calculatedRoute,
+    isCalculating,
+    handleMapTap,
+    handleMarkerTap,
+    beginRelocation,
+    cancelRelocation,
+    selectWaypoint,
+    startMovingWaypoint,
+    moveWaypoint,
+    removeSelectedWaypoint,
+    reorderSelectedWaypoint,
+    clearWaypoints,
+    loadSavedRoute,
+    calculateCurrentRoute,
+    getRouteSnapshot,
+  } = useRouteDraft();
   const [isSavingRoute, setIsSavingRoute] = useState(false);
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [isElevationModalVisible, setIsElevationModalVisible] = useState(false);
@@ -153,7 +166,14 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [isCenteringOnLocation, setIsCenteringOnLocation] = useState(false);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [routeName, setRouteName] = useState('');
-  const [route, setRoute] = useState<any>(null);
+  const routeGeometry = calculatedRoute?.geoJson;
+  const isRelocating = relocatingId !== null;
+  const isEditingWaypoint = draggingId !== null || isRelocating;
+  const relocationIndex = isRelocating
+    ? waypoints.findIndex(point => point.id === relocatingId) + 1
+    : 0;
+  const relocationHint = `Tocca la nuova posizione del punto ${relocationIndex}.`;
+  const route = isEditingWaypoint ? null : routeGeometry;
   const routeStats = useMemo(() => getRouteStats(route), [route]);
   const ascentMeters = routeStats?.ascentMeters ?? null;
   const formattedAscent =
@@ -162,9 +182,6 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
       : formatElevation(ascentMeters, measurementSystem);
   const elevationProfile = useMemo(() => getElevationProfile(route), [route]);
   const terrainDetails = getRouteTerrainDetails(route);
-  const selectedWaypointIndex = waypoints.findIndex(
-    waypoint => waypoint.id === selectedWaypointId,
-  );
   const topControlsStyle = [
     styles.topControls,
     {top: insets.top + 10},
@@ -174,144 +191,86 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     {top: insets.top + 172},
   ];
 
-  const snapActionSheet = useCallback(
-    (collapsed: boolean) => {
-      const nextOffset = collapsed
-        ? Math.max(0, actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT)
-        : 0;
+  const getCameraPadding = useCallback(() => {
+    const height = viewportHeight.current;
+    return {
+      top: Math.min(insets.top + 152, height * 0.36),
+      right: 40,
+      bottom: Math.min(getVisibleHeight() + 28, height * 0.55),
+      left: 32,
+    };
+  }, [getVisibleHeight, insets.top]);
 
-      Animated.spring(actionSheetTranslateY, {
-        toValue: nextOffset,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 220,
-        mass: 0.7,
-      }).start(({finished}) => {
-        if (finished) {
-          actionSheetOffsetY.current = nextOffset;
-          isActionSheetCollapsed.current = collapsed;
-        }
-      });
-    },
-    [actionSheetTranslateY],
-  );
+  const fitSavedWaypoints = useCallback(() => {
+    const camera = cameraRef.current;
+    const coordinates = pendingCameraFit.current;
+    if (!camera || !isMapReady.current || !coordinates?.length) {
+      return;
+    }
 
-  const handleActionSheetLayout = useCallback(
-    ({nativeEvent}: {nativeEvent: {layout: {height: number}}}) => {
-      actionSheetHeight.current = nativeEvent.layout.height;
+    pendingCameraFit.current = null;
+    const longitudes = coordinates.map(([longitude]) => longitude);
+    const latitudes = coordinates.map(([, latitude]) => latitude);
+    const west = Math.min(...longitudes);
+    const east = Math.max(...longitudes);
+    const south = Math.min(...latitudes);
+    const north = Math.max(...latitudes);
+    const horizontalMargin = Math.max((east - west) * 0.08, 0.005);
+    const verticalMargin = Math.max((north - south) * 0.08, 0.005);
+    const bounds: LngLatBounds = [
+      west - horizontalMargin,
+      Math.max(-85, south - verticalMargin),
+      east + horizontalMargin,
+      Math.min(85, north + verticalMargin),
+    ];
 
-      if (isActionSheetCollapsed.current) {
-        const collapsedOffset = Math.max(
-          0,
-          actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT,
-        );
-        actionSheetOffsetY.current = collapsedOffset;
-        actionSheetTranslateY.setValue(collapsedOffset);
-      }
-    },
-    [actionSheetTranslateY],
-  );
-
-  const actionSheetPanResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          Math.abs(gestureState.dy) > 3 &&
-          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
-        onPanResponderGrant: () => {
-          actionSheetTranslateY.stopAnimation(value => {
-            actionSheetOffsetY.current = value;
-          });
-        },
-        onPanResponderMove: (_, gestureState) => {
-          const maxOffset = Math.max(
-            0,
-            actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT,
-          );
-          const nextOffset = Math.min(
-            maxOffset,
-            Math.max(0, actionSheetOffsetY.current + gestureState.dy),
-          );
-
-          actionSheetTranslateY.setValue(nextOffset);
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          const maxOffset = Math.max(
-            0,
-            actionSheetHeight.current - COLLAPSED_SHEET_HEIGHT,
-          );
-          const currentOffset = Math.min(
-            maxOffset,
-            Math.max(0, actionSheetOffsetY.current + gestureState.dy),
-          );
-          const shouldCollapse =
-            gestureState.vy > 0.3 || currentOffset > maxOffset / 2;
-
-          snapActionSheet(shouldCollapse);
-        },
-        onPanResponderTerminate: () => {
-          snapActionSheet(isActionSheetCollapsed.current);
-        },
-      }),
-    [actionSheetTranslateY, snapActionSheet],
-  );
+    camera.fitBounds(bounds, {
+      padding: getCameraPadding(),
+      duration: reduceMotion ? 0 : 550,
+    });
+  }, [getCameraPadding, reduceMotion]);
 
   useEffect(() => {
     const savedRoute = navigationRoute.params?.savedRoute;
-
     if (!savedRoute) {
       return;
     }
 
-    setWaypoints(
-      savedRoute.waypoints.map((coordinate, id) => ({id, coordinate})),
-    );
-    setNextWaypointId(savedRoute.waypoints.length);
-    setSelectedWaypointId(null);
-    setRoute(savedRoute.geoJson);
-
-    if (savedRoute.waypoints.length > 0) {
-      const longitudes = savedRoute.waypoints.map(([longitude]) => longitude);
-      const latitudes = savedRoute.waypoints.map(([, latitude]) => latitude);
-      const longitudePadding = Math.max(
-        (Math.max(...longitudes) - Math.min(...longitudes)) * 0.08,
-        0.005,
-      );
-      const latitudePadding = Math.max(
-        (Math.max(...latitudes) - Math.min(...latitudes)) * 0.08,
-        0.005,
-      );
-      const bounds: LngLatBounds = [
-        Math.min(...longitudes) - longitudePadding,
-        Math.min(...latitudes) - latitudePadding,
-        Math.max(...longitudes) + longitudePadding,
-        Math.max(...latitudes) + latitudePadding,
-      ];
-
-      cameraRef.current?.fitBounds(bounds, {
-        padding: {top: 48, right: 32, bottom: 224, left: 32},
-        duration: 700,
-      });
-    }
-
+    loadSavedRoute(savedRoute);
+    pendingCameraFit.current = savedRoute.waypoints;
+    fitSavedWaypoints();
     navigation.setParams({savedRoute: undefined});
-  }, [navigation, navigationRoute.params?.savedRoute]);
+  }, [fitSavedWaypoints, loadSavedRoute, navigation, navigationRoute.params?.savedRoute]);
 
   const handleMapPress = (event: MapPressEvent) => {
-    triggerHaptic('impactLight');
-    const [lng, lat] = event.nativeEvent.lngLat;
-    const newWaypoint: Waypoint = {
-      id: nextWaypointId,
-      coordinate: [lng, lat],
-    };
-
-    setWaypoints(current => [...current, newWaypoint]);
-    setNextWaypointId(current => current + 1);
-    setSelectedWaypointId(null);
-    setRoute(null);
+    pendingCameraFit.current = null;
+    handleMapTap(event.nativeEvent.lngLat);
   };
 
-  const clearWaypoints = () => {
+  useEffect(() => {
+    if (isRelocating) {
+      AccessibilityInfo.announceForAccessibility(relocationHint);
+    }
+  }, [isRelocating, relocationHint]);
+
+  const relocateSelectedWaypoint = () => {
+    if (beginRelocation()) {
+      sheet.collapse();
+    }
+  };
+
+  const focusWaypoint = (id: number) => {
+    const coordinate = selectWaypoint(id);
+    if (coordinate && isMapReady.current) {
+      cameraRef.current?.easeTo({
+        center: coordinate,
+        padding: getCameraPadding(),
+        duration: reduceMotion ? 0 : 300,
+      });
+    }
+  };
+
+  const confirmClearWaypoints = () => {
     triggerHaptic('selection');
     Alert.alert(
       'Cancellare tutti i waypoint?',
@@ -323,99 +282,11 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           style: 'destructive',
           onPress: () => {
             triggerHaptic('impactMedium');
-            setWaypoints([]);
-            setSelectedWaypointId(null);
-            setRoute(null);
+            clearWaypoints();
           },
         },
       ],
     );
-  };
-
-  const handleCalculateRoute = async () => {
-    if (waypoints.length < 2) {
-      return;
-    }
-
-    triggerHaptic('selection');
-    try {
-      const routeData = await calculateRoute(
-        waypoints.map(waypoint => waypoint.coordinate),
-      );
-      setRoute(routeData);
-      triggerHaptic('notificationSuccess');
-    } catch (error) {
-      triggerHaptic('notificationError');
-      Alert.alert(
-        'Percorso non calcolato',
-        error instanceof RouteCalculationError
-          ? error.message
-          : 'Non è stato possibile calcolare il percorso. Controlla la connessione e riprova.',
-      );
-    }
-  };
-
-  const removeWaypoint = (idToRemove: number) => {
-    triggerHaptic('notificationWarning');
-    setWaypoints(current => current.filter(({id}) => id !== idToRemove));
-    setSelectedWaypointId(null);
-    setRoute(null);
-  };
-
-  const reorderSelectedWaypoint = (offset: -1 | 1) => {
-    const targetIndex = selectedWaypointIndex + offset;
-
-    if (
-      selectedWaypointId === null ||
-      selectedWaypointIndex === -1 ||
-      targetIndex < 0 ||
-      targetIndex >= waypoints.length
-    ) {
-      return;
-    }
-
-    setWaypoints(current => {
-      const currentIndex = current.findIndex(
-        waypoint => waypoint.id === selectedWaypointId,
-      );
-      const nextIndex = currentIndex + offset;
-
-      if (
-        currentIndex === -1 ||
-        nextIndex < 0 ||
-        nextIndex >= current.length
-      ) {
-        return current;
-      }
-
-      const reorderedWaypoints = [...current];
-      const [selectedWaypoint] = reorderedWaypoints.splice(currentIndex, 1);
-      reorderedWaypoints.splice(nextIndex, 0, selectedWaypoint);
-
-      return reorderedWaypoints;
-    });
-
-    triggerHaptic('impactLight');
-    setRoute(null);
-  };
-
-  const moveWaypoint = (idToMove: number, coordinate: Coordinate) => {
-    setWaypoints(current =>
-      current.map(waypoint =>
-        waypoint.id === idToMove ? {...waypoint, coordinate} : waypoint,
-      ),
-    );
-    setRoute(null);
-  };
-
-  const selectWaypoint = (id: number) => {
-    triggerHaptic('selection');
-    setSelectedWaypointId(id);
-  };
-
-  const startMovingWaypoint = (id: number) => {
-    triggerHaptic('impactMedium');
-    setSelectedWaypointId(id);
   };
 
   const openSaveRouteModal = () => {
@@ -462,18 +333,20 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const handleSaveRoute = async () => {
     const trimmedRouteName = routeName.trim();
 
-    if (!route || isSavingRoute || !trimmedRouteName) {
+    const snapshot = getRouteSnapshot();
+    if (!snapshot || savingRoute.current || !trimmedRouteName) {
       return;
     }
 
+    savingRoute.current = true;
     triggerHaptic('selection');
     setIsSavingRoute(true);
 
     try {
       await saveRoute({
         name: trimmedRouteName,
-        waypoints: waypoints.map(waypoint => waypoint.coordinate),
-        geoJson: route,
+        waypoints: snapshot.waypoints,
+        geoJson: snapshot.calculatedRoute.geoJson,
       });
       setIsSaveModalVisible(false);
       triggerHaptic('notificationSuccess');
@@ -491,6 +364,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         `Non è stato possibile salvare il percorso.\n\nDettaglio: ${errorMessage}`,
       );
     } finally {
+      savingRoute.current = false;
       setIsSavingRoute(false);
     }
   };
@@ -498,25 +372,6 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const handleSatelliteViewChange = (enabled: boolean) => {
     setSatelliteViewEnabled(enabled);
     triggerHaptic(enabled ? 'toggleOn' : 'toggleOff');
-  };
-
-  const getMapFocusCoordinate = (): Coordinate => {
-    if (waypoints.length === 0) {
-      return ITALY_CENTER;
-    }
-
-    const [longitudeSum, latitudeSum] = waypoints.reduce(
-      ([longitude, latitude], waypoint) => [
-        longitude + waypoint.coordinate[0],
-        latitude + waypoint.coordinate[1],
-      ],
-      [0, 0],
-    );
-
-    return [
-      longitudeSum / waypoints.length,
-      latitudeSum / waypoints.length,
-    ];
   };
 
   const centerMap = async () => {
@@ -574,21 +429,30 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
 
     triggerHaptic('selection');
     setIs3DEnabled(enabled);
-    cameraRef.current?.easeTo({
-      center: getMapFocusCoordinate(),
+    cameraRef.current?.setStop({
       pitch: enabled ? 55 : 0,
-      duration: 500,
+      duration: reduceMotion ? 0 : 400,
+      easing: 'ease',
     });
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={event => {
+        viewportHeight.current = event.nativeEvent.layout.height;
+      }}
+    >
       <Map
         style={styles.map}
         mapStyle={
           isSatelliteViewEnabled ? HYBRID_MAP_STYLE : STREET_MAP_STYLE
         }
         onPress={handleMapPress}
+        onDidFinishLoadingStyle={() => {
+          isMapReady.current = true;
+          fitSavedWaypoints();
+        }}
       >
         <Camera
           ref={cameraRef}
@@ -602,15 +466,18 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           <UserLocation animated accuracy heading minDisplacement={5} />
         )}
 
-        {route && (
-          <GeoJSONSource id="routeSource" data={route}>
+        {!!routeGeometry && (
+          <GeoJSONSource
+            id="routeSource"
+            data={routeGeometry as React.ComponentProps<typeof GeoJSONSource>['data']}
+          >
             <Layer
               id="routeOutline"
               type="line"
               paint={{
                 'line-color': isSatelliteViewEnabled ? '#FFFFFF' : '#166534',
                 'line-width': 8,
-                'line-opacity': 0.9,
+                'line-opacity': draggingId === null ? 0.9 : 0,
               }}
               layout={{'line-cap': 'round', 'line-join': 'round'}}
             />
@@ -620,53 +487,60 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
               paint={{
                 'line-color': isSatelliteViewEnabled ? '#FDE047' : '#16A34A',
                 'line-width': 5,
+                'line-opacity': draggingId === null ? 1 : 0,
               }}
               layout={{'line-cap': 'round', 'line-join': 'round'}}
             />
           </GeoJSONSource>
         )}
 
-        {waypoints.map(({id, coordinate}, index) => (
-          <ViewAnnotation
-            key={id}
-            id={`waypoint-${id}`}
-            lngLat={coordinate}
-            anchor="center"
-            draggable
-            onPress={event => {
-              event.stopPropagation();
-              selectWaypoint(id);
-            }}
-            onDragStart={() => startMovingWaypoint(id)}
-            onDragEnd={event => moveWaypoint(id, event.nativeEvent.lngLat)}
-          >
-            <View style={styles.markerContainer}>
-              <View
-                style={[
-                  styles.marker,
-                  waypoints.length > 1 &&
-                    index === waypoints.length - 1 &&
-                    styles.arrivalMarker,
-                  selectedWaypointId === id && styles.selectedMarker,
-                ]}
-              >
-                <Text style={styles.markerText}>{index + 1}</Text>
-              </View>
-              {(index === 0 || index === waypoints.length - 1) && (
-                <Text
+        {waypoints.map(({id, coordinate}, index) => {
+          const isArrival = waypoints.length > 1 && index === waypoints.length - 1;
+          const label = index === 0 ? 'Partenza' : isArrival ? 'Arrivo' : null;
+          const labelStyle = [styles.markerLabel, isArrival && styles.arrivalMarkerLabel];
+
+          return (
+            <ViewAnnotation
+              key={id}
+              id={`waypoint-${id}`}
+              lngLat={coordinate}
+              anchor="center"
+              draggable={!isRelocating}
+              onPress={event => {
+                event.stopPropagation();
+                if (handleMarkerTap(id)) {
+                  sheet.expand();
+                }
+              }}
+              onDragStart={() => startMovingWaypoint(id)}
+              onDragEnd={event => moveWaypoint(id, event.nativeEvent.lngLat)}
+            >
+              <View style={styles.markerContainer}>
+                {/* A matching spacer keeps the circle centered on the coordinate. */}
+                {label && (
+                  <Text
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                    style={[labelStyle, styles.markerLabelSpacer]}
+                  >
+                    {label}
+                  </Text>
+                )}
+                <View
                   style={[
-                    styles.markerLabel,
-                    index === waypoints.length - 1 &&
-                      waypoints.length > 1 &&
-                      styles.arrivalMarkerLabel,
+                    styles.marker,
+                    isArrival && styles.arrivalMarker,
+                    selectedId === id && styles.selectedMarker,
+                    relocatingId === id && styles.relocatingMarker,
                   ]}
                 >
-                  {index === 0 ? 'Partenza' : 'Arrivo'}
-                </Text>
-              )}
-            </View>
-          </ViewAnnotation>
-        ))}
+                  <Text style={styles.markerText}>{index + 1}</Text>
+                </View>
+                {label && <Text style={labelStyle}>{label}</Text>}
+              </View>
+            </ViewAnnotation>
+          );
+        })}
       </Map>
 
       <View style={topControlsStyle}>
@@ -707,61 +581,83 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           </View>
         </View>
 
-        <View
-          accessible
-          accessibilityLabel={
-            routeStats
-              ? `Distanza ${formatDistance(
-                  routeStats.distanceMeters,
-                  measurementSystem,
-                )}, dislivello positivo ${formattedAscent ?? 'non disponibile'}`
-              : 'Statistiche del percorso non ancora disponibili'
-          }
-          style={[styles.routeStatsCard, isDarkMode && styles.mapHeaderCardDark]}
-        >
-          <View style={styles.routeStat}>
-            <View style={styles.routeStatHeading}>
-              <MaterialCommunityIcons name="map" color="#94A3B8" size={12} />
-              <Text style={styles.routeStatLabel}>DISTANZA</Text>
-            </View>
-            <Text
-              style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
-            >
-              {routeStats
-                ? formatDistance(routeStats.distanceMeters, measurementSystem)
-                : measurementSystem === 'imperial'
-                ? '— mi'
-                : '— km'}
+        {isRelocating ? (
+          <View
+            style={[
+              styles.routeStatsCard,
+              styles.relocationCard,
+              isDarkMode && styles.mapHeaderCardDark,
+            ]}
+          >
+            <Text style={[styles.relocationHint, isDarkMode && styles.primaryTextDark]}>
+              {relocationHint}
             </Text>
-          </View>
-          <View style={styles.routeStatsDivider} />
-          <View style={styles.routeStat}>
-            <View style={styles.routeStatHeading}>
-              <MaterialCommunityIcons name="chart-line" color="#059669" size={12} />
-              <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
-            </View>
-            <Text
-              style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Annulla lo spostamento del waypoint"
+              style={[styles.sheetSaveButton, styles.relocateButton]}
+              onPress={cancelRelocation}
             >
-              {formattedAscent ??
-                (measurementSystem === 'imperial' ? '— ft' : '— m')}
-            </Text>
+              <Text style={styles.sheetSaveText}>Annulla</Text>
+            </Pressable>
           </View>
-          <View style={styles.routeStatsDivider} />
-          <View style={styles.routeStat}>
-            <View style={styles.routeStatHeading}>
-              <MaterialCommunityIcons name="clock-outline" color="#94A3B8" size={12} />
-              <Text style={styles.routeStatLabel}>TEMPO</Text>
+        ) : (
+          <View
+            accessible
+            accessibilityLabel={
+              routeStats
+                ? `Distanza ${formatDistance(
+                    routeStats.distanceMeters,
+                    measurementSystem,
+                  )}, dislivello positivo ${formattedAscent ?? 'non disponibile'}`
+                : 'Statistiche del percorso non ancora disponibili'
+            }
+            style={[styles.routeStatsCard, isDarkMode && styles.mapHeaderCardDark]}
+          >
+            <View style={styles.routeStat}>
+              <View style={styles.routeStatHeading}>
+                <MaterialCommunityIcons name="map" color="#94A3B8" size={12} />
+                <Text style={styles.routeStatLabel}>DISTANZA</Text>
+              </View>
+              <Text
+                style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+              >
+                {routeStats
+                  ? formatDistance(routeStats.distanceMeters, measurementSystem)
+                  : measurementSystem === 'imperial'
+                  ? '— mi'
+                  : '— km'}
+              </Text>
             </View>
-            <Text
-              style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
-            >
-              {routeStats?.durationSeconds === null || !routeStats
-                ? '—'
-                : formatDuration(routeStats.durationSeconds)}
-            </Text>
+            <View style={styles.routeStatsDivider} />
+            <View style={styles.routeStat}>
+              <View style={styles.routeStatHeading}>
+                <MaterialCommunityIcons name="chart-line" color="#059669" size={12} />
+                <Text style={styles.routeStatLabel}>DISLIVELLO</Text>
+              </View>
+              <Text
+                style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+              >
+                {formattedAscent ??
+                  (measurementSystem === 'imperial' ? '— ft' : '— m')}
+              </Text>
+            </View>
+            <View style={styles.routeStatsDivider} />
+            <View style={styles.routeStat}>
+              <View style={styles.routeStatHeading}>
+                <MaterialCommunityIcons name="clock-outline" color="#94A3B8" size={12} />
+                <Text style={styles.routeStatLabel}>TEMPO</Text>
+              </View>
+              <Text
+                style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
+              >
+                {routeStats?.durationSeconds === null || !routeStats
+                  ? '—'
+                  : formatDuration(routeStats.durationSeconds)}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       <View style={quickControlsStyle}>
@@ -810,78 +706,47 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
         style={[
           styles.actionSheet,
           isDarkMode && styles.actionSheetDark,
-          {transform: [{translateY: actionSheetTranslateY}]},
+          {transform: [{translateY: sheet.translateY}]},
         ]}
-        onLayout={handleActionSheetLayout}
+        onLayout={sheet.onLayout}
       >
-          <View
-            {...actionSheetPanResponder.panHandlers}
-            accessibilityLabel="Trascina il pannello azioni per mostrare più mappa"
-            accessibilityRole="adjustable"
+        <View {...sheet.panHandlers}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={sheet.isCollapsed ? 'Apri pannello waypoint' : 'Riduci pannello waypoint'}
+            accessibilityState={{expanded: !sheet.isCollapsed}}
+            onPress={sheet.toggle}
             style={styles.sheetDragArea}
           >
             <View style={[styles.sheetHandle, isDarkMode && styles.sheetHandleDark]} />
-          </View>
+            <Text style={[styles.sheetHeading, isDarkMode && styles.primaryTextDark]}>
+              {waypoints.length > 0 ? `${waypoints.length} waypoint` : 'Waypoint'}
+            </Text>
+            <MaterialCommunityIcons
+              name={sheet.isCollapsed ? 'chevron-up' : 'chevron-down'}
+              color={isDarkMode ? '#CBD5E1' : '#475569'}
+              size={18}
+            />
+          </Pressable>
+        </View>
 
-          <View style={styles.sheetButtonRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Sposta il waypoint prima"
-                disabled={
-                  selectedWaypointId === null || selectedWaypointIndex <= 0
-                }
-                style={[
-                  styles.sheetSecondaryButton,
-                  (selectedWaypointId === null ||
-                    selectedWaypointIndex <= 0) &&
-                    styles.controlDisabled,
-                ]}
-                onPress={() => reorderSelectedWaypoint(-1)}
-              >
-                <MaterialCommunityIcons name="chevron-left" color="#334155" size={14} />
-                <Text style={styles.sheetSecondaryText}>Prima</Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Elimina il waypoint selezionato"
-                disabled={selectedWaypointId === null}
-                style={[
-                  styles.sheetDeleteButton,
-                  selectedWaypointId === null && styles.controlDisabled,
-                ]}
-                onPress={() => {
-                  if (selectedWaypointId !== null) {
-                    removeWaypoint(selectedWaypointId);
-                  }
-                }}
-              >
-                <MaterialCommunityIcons name="delete-outline" color="#E11D48" size={14} />
-                <Text style={styles.sheetDeleteText}>Elimina</Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Sposta il waypoint dopo"
-                disabled={
-                  selectedWaypointId === null ||
-                  selectedWaypointIndex === -1 ||
-                  selectedWaypointIndex === waypoints.length - 1
-                }
-                style={[
-                  styles.sheetSecondaryButton,
-                  (selectedWaypointId === null ||
-                    selectedWaypointIndex === -1 ||
-                    selectedWaypointIndex === waypoints.length - 1) &&
-                    styles.controlDisabled,
-                ]}
-                onPress={() => reorderSelectedWaypoint(1)}
-              >
-                <Text style={styles.sheetSecondaryText}>Dopo</Text>
-                <MaterialCommunityIcons name="chevron-right" color="#334155" size={14} />
-              </Pressable>
-          </View>
-
+        <View
+          style={styles.sheetContent}
+          pointerEvents={sheet.isCollapsed ? 'none' : 'auto'}
+          accessibilityElementsHidden={sheet.isCollapsed}
+          importantForAccessibility={sheet.isCollapsed ? 'no-hide-descendants' : 'auto'}
+        >
+          <WaypointControls
+            waypoints={waypoints}
+            selectedId={selectedId}
+            isEditing={isEditingWaypoint}
+            isDarkMode={isDarkMode}
+            reduceMotion={reduceMotion}
+            selectWaypoint={focusWaypoint}
+            beginRelocation={relocateSelectedWaypoint}
+            reorderSelectedWaypoint={reorderSelectedWaypoint}
+            removeSelectedWaypoint={removeSelectedWaypoint}
+          />
           <View style={styles.sheetButtonRow}>
               <Pressable
                 accessibilityRole="button"
@@ -935,31 +800,36 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
           </View>
 
           <Pressable
-              accessibilityRole="button"
-              disabled={waypoints.length < 2}
-              style={[
-                styles.calculateButton,
-                waypoints.length < 2 && styles.calculateButtonDisabled,
-              ]}
-              onPress={handleCalculateRoute}
-            >
-              <MaterialCommunityIcons name="map" color="#FFFFFF" size={17} />
-              <Text style={styles.calculateButtonText}>Calcola percorso</Text>
+            accessibilityRole="button"
+            accessibilityState={{busy: isCalculating}}
+            disabled={waypoints.length < 2 || isCalculating || isEditingWaypoint}
+            style={[
+              styles.calculateButton,
+              (waypoints.length < 2 || isCalculating || isEditingWaypoint) &&
+                styles.calculateButtonDisabled,
+            ]}
+            onPress={calculateCurrentRoute}
+          >
+            <MaterialCommunityIcons name="map" color="#FFFFFF" size={17} />
+            <Text style={styles.calculateButtonText}>
+              {isCalculating ? 'Calcolo in corso…' : 'Calcola percorso'}
+            </Text>
           </Pressable>
 
           <Pressable
             accessibilityRole="button"
-            disabled={waypoints.length === 0}
+            disabled={waypoints.length === 0 || isEditingWaypoint}
             style={[
               styles.clearButton,
-              waypoints.length === 0 && styles.controlDisabled,
+              (waypoints.length === 0 || isEditingWaypoint) && styles.controlDisabled,
             ]}
-            onPress={clearWaypoints}
+            onPress={confirmClearWaypoints}
           >
             <Text style={styles.clearButtonText}>
               Cancella tutti i waypoint
             </Text>
           </Pressable>
+        </View>
       </Animated.View>
 
       <Modal

@@ -3,6 +3,7 @@ import {StyleSheet} from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
+    overflow: 'hidden',
     backgroundColor: '#EAF0EC',
   },
 
@@ -156,6 +157,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
+  relocatingMarker: {borderColor: '#38BDF8'},
 
   markerText: {
     color: '#FFFFFF',
@@ -176,6 +178,8 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
   },
+
+  markerLabelSpacer: {marginTop: 0, marginBottom: 3, opacity: 0},
 
   arrivalMarkerLabel: {
     borderColor: '#A7F3D0',
@@ -249,7 +253,7 @@ export const styles = StyleSheet.create({
   },
 
   sheetHandle: {
-    width: 40,
+    width: 24,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#CBD5E1',
@@ -258,10 +262,32 @@ export const styles = StyleSheet.create({
 
   sheetDragArea: {
     width: '100%',
-    height: 20,
+    height: 32,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+
+  sheetHeading: {flex: 1, color: '#334155', fontSize: 13, fontWeight: '700'},
+  sheetContent: {gap: 11},
+  waypointTools: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  waypointList: {flex: 1},
+  waypointStrip: {gap: 8, paddingVertical: 2},
+  waypointHint: {color: '#64748B', fontSize: 13, paddingVertical: 8},
+  waypointChip: {
+    width: 44,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
   },
+  waypointChipDark: {borderColor: '#475569', backgroundColor: '#1E293B'},
+  waypointChipSelected: {borderColor: '#047857', backgroundColor: '#047857'},
+  waypointChipText: {color: '#334155', fontSize: 13, fontWeight: '700'},
+  waypointChipTextSelected: {color: '#FFFFFF'},
 
   sheetButtonRow: {
     width: '100%',
@@ -352,6 +378,10 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+
+  relocateButton: {flexBasis: 'auto', flexGrow: 0, paddingHorizontal: 9},
+  relocationCard: {gap: 8},
+  relocationHint: {flex: 1, color: '#334155', fontSize: 13, fontWeight: '600'},
 
   calculateButton: {
     width: '100%',
