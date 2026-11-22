@@ -27,6 +27,7 @@ type RouteFeature = {
     coordinates?: number[][];
   };
   properties?: {
+    ascent?: number;
     summary?: RouteSummary;
     segments?: RouteSegment[];
     extras?: {
@@ -41,7 +42,7 @@ type RouteGeoJson = {
 
 export type RouteStats = {
   distanceMeters: number;
-  ascentMeters: number;
+  ascentMeters: number | null;
   durationSeconds: number | null;
 };
 
@@ -77,6 +78,7 @@ const SURFACE_CATEGORIES: Record<number, string> = {
 const PAVED_SURFACE_VALUES = new Set([1, 3, 4, 5, 6, 7, 14]);
 
 const EARTH_RADIUS_METERS = 6_371_000;
+const MIN_ELEVATION_REVERSAL_METERS = 5;
 
 function degreesToRadians(value: number) {
   return (value * Math.PI) / 180;
@@ -119,21 +121,73 @@ function getCoordinateDistance(
   );
 }
 
-function sumPositiveElevationGain(coordinates: number[][]) {
-  return coordinates.reduce((gain, coordinate, index) => {
-    if (index === 0 || coordinate.length < 3) {
-      return gain;
+function getProfileAscent(coordinates: number[][]): number | null {
+  if (
+    coordinates.length < 2 ||
+    coordinates.some(coordinate => !Number.isFinite(coordinate?.[2]))
+  ) {
+    return null;
+  }
+
+  const startElevation = coordinates[0][2];
+  const endElevation = coordinates[coordinates.length - 1][2];
+  let ascent = 0;
+  let valley = startElevation;
+  let peak = valley;
+  let climbing = false;
+
+  // Confirm a change of direction before counting the full climb.
+  for (const [, , elevation] of coordinates) {
+    if (climbing) {
+      peak = Math.max(peak, elevation);
+      if (peak - elevation >= MIN_ELEVATION_REVERSAL_METERS) {
+        ascent += peak - valley;
+        valley = elevation;
+        climbing = false;
+      }
+    } else {
+      valley = Math.min(valley, elevation);
+      if (elevation - valley >= MIN_ELEVATION_REVERSAL_METERS) {
+        peak = elevation;
+        climbing = true;
+      }
     }
+  }
 
-    const previousElevation = coordinates[index - 1][2];
-    const currentElevation = coordinate[2];
+  if (climbing) {
+    ascent += peak - valley;
+  }
 
-    if (!Number.isFinite(previousElevation) || !Number.isFinite(currentElevation)) {
-      return gain;
+  return Math.max(ascent, endElevation - startElevation);
+}
+
+function isValidAscent(value: number | undefined): value is number {
+  return value !== undefined && Number.isFinite(value) && value >= 0;
+}
+
+function getReportedAscent(
+  properties: RouteFeature['properties'],
+): number | null {
+  const featureAscent = properties?.ascent;
+  const summaryAscent = properties?.summary?.ascent;
+  const segments = properties?.segments ?? [];
+
+  if (isValidAscent(featureAscent)) {
+    return featureAscent;
+  }
+  if (isValidAscent(summaryAscent)) {
+    return summaryAscent;
+  }
+
+  let total = 0;
+  for (const {ascent} of segments) {
+    if (!isValidAscent(ascent)) {
+      return null;
     }
+    total += ascent;
+  }
 
-    return gain + Math.max(0, currentElevation - previousElevation);
-  }, 0);
+  return segments.length > 0 && Number.isFinite(total) ? total : null;
 }
 
 export function getRouteStats(route: unknown): RouteStats | null {
@@ -152,14 +206,6 @@ export function getRouteStats(route: unknown): RouteStats | null {
   const distanceMeters =
     summary?.distance ??
     segments.reduce((total, segment) => total + (segment.distance ?? 0), 0);
-  const ascentMeters =
-    summary?.ascent ??
-    (segments.some(segment => typeof segment.ascent === 'number')
-      ? segments.reduce(
-          (total, segment) => total + (segment.ascent ?? 0),
-          0,
-        )
-      : sumPositiveElevationGain(feature.geometry?.coordinates ?? []));
   const durationSeconds =
     typeof summary?.duration === 'number'
       ? summary.duration
@@ -176,7 +222,9 @@ export function getRouteStats(route: unknown): RouteStats | null {
 
   return {
     distanceMeters,
-    ascentMeters: Number.isFinite(ascentMeters) ? Math.max(0, ascentMeters) : 0,
+    ascentMeters:
+      getProfileAscent(feature.geometry?.coordinates ?? []) ??
+      getReportedAscent(feature.properties),
     durationSeconds:
       durationSeconds !== null && Number.isFinite(durationSeconds)
         ? Math.max(0, durationSeconds)

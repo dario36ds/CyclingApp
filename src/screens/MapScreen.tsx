@@ -154,7 +154,12 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [route, setRoute] = useState<any>(null);
-  const routeStats = getRouteStats(route);
+  const routeStats = useMemo(() => getRouteStats(route), [route]);
+  const ascentMeters = routeStats?.ascentMeters ?? null;
+  const formattedAscent =
+    ascentMeters === null
+      ? null
+      : formatElevation(ascentMeters, measurementSystem);
   const elevationProfile = getElevationProfile(route);
   const terrainDetails = getRouteTerrainDetails(route);
   const selectedWaypointIndex = waypoints.findIndex(
@@ -709,10 +714,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
               ? `Distanza ${formatDistance(
                   routeStats.distanceMeters,
                   measurementSystem,
-                )}, dislivello positivo ${formatElevation(
-                  routeStats.ascentMeters,
-                  measurementSystem,
-                )}`
+                )}, dislivello positivo ${formattedAscent ?? 'non disponibile'}`
               : 'Statistiche del percorso non ancora disponibili'
           }
           style={[styles.routeStatsCard, isDarkMode && styles.mapHeaderCardDark]}
@@ -741,11 +743,8 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
             <Text
               style={[styles.routeStatValue, isDarkMode && styles.primaryTextDark]}
             >
-              {routeStats
-                ? formatElevation(routeStats.ascentMeters, measurementSystem)
-                : measurementSystem === 'imperial'
-                ? '— ft'
-                : '— m'}
+              {formattedAscent ??
+                (measurementSystem === 'imperial' ? '— ft' : '— m')}
             </Text>
           </View>
           <View style={styles.routeStatsDivider} />
