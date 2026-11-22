@@ -137,11 +137,13 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
       const matchesQuery = route.name
         .toLocaleLowerCase('it-IT')
         .includes(normalizedQuery);
-      const routeStats = getRouteStats(route.geoJson);
 
       if (!matchesQuery) {
         return false;
       }
+
+      const routeStats =
+        activeFilters.length > 0 ? getRouteStats(route.geoJson) : null;
       if (
         activeFilters.includes('elevation') &&
         (routeStats?.ascentMeters ?? 0) <= 1_000
@@ -359,9 +361,11 @@ export function SavedRoutesScreen({navigation}: SavedRoutesScreenProps) {
           const distance = routeStats
             ? formatDistance(routeStats.distanceMeters, measurementSystem)
             : '—';
-          const elevation = routeStats
-            ? formatElevation(routeStats.ascentMeters, measurementSystem)
-            : '—';
+          const ascentMeters = routeStats?.ascentMeters ?? null;
+          const elevation =
+            ascentMeters === null
+              ? '—'
+              : formatElevation(ascentMeters, measurementSystem);
           const duration =
             routeStats && routeStats.durationSeconds !== null
               ? formatDuration(routeStats.durationSeconds)

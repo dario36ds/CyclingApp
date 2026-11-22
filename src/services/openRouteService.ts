@@ -7,7 +7,10 @@ const DIRECTIONS_URL =
 
 export class RouteCalculationError extends Error {}
 
-export async function calculateRoute(coordinates: Coordinate[]) {
+export async function calculateRoute(
+  coordinates: Coordinate[],
+  signal?: AbortSignal,
+) {
   if (!Config.ORS_API_KEY) {
     throw new RouteCalculationError(
       'Il servizio per il calcolo dei percorsi non è configurato.',
@@ -16,6 +19,7 @@ export async function calculateRoute(coordinates: Coordinate[]) {
 
   const response = await fetch(DIRECTIONS_URL, {
     method: 'POST',
+    signal,
     headers: {
       Authorization: Config.ORS_API_KEY,
       'Content-Type': 'application/json',

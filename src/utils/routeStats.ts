@@ -1,4 +1,10 @@
 import type {MeasurementSystem} from '../types/measurement';
+import {
+  getElevationSamples,
+  getProfileAscent,
+  smoothElevation,
+} from './routeElevation';
+import type {ElevationPoint} from './routeElevation';
 
 type RouteSummary = {
   distance?: number;
@@ -27,6 +33,7 @@ type RouteFeature = {
     coordinates?: number[][];
   };
   properties?: {
+    ascent?: number;
     summary?: RouteSummary;
     segments?: RouteSegment[];
     extras?: {
@@ -41,14 +48,11 @@ type RouteGeoJson = {
 
 export type RouteStats = {
   distanceMeters: number;
-  ascentMeters: number;
+  ascentMeters: number | null;
   durationSeconds: number | null;
 };
 
-export type ElevationPoint = {
-  distanceMeters: number;
-  elevationMeters: number;
-};
+export type {ElevationPoint} from './routeElevation';
 
 export type ElevationProfileData = {
   points: ElevationPoint[];
@@ -76,64 +80,33 @@ const SURFACE_CATEGORIES: Record<number, string> = {
 
 const PAVED_SURFACE_VALUES = new Set([1, 3, 4, 5, 6, 7, 14]);
 
-const EARTH_RADIUS_METERS = 6_371_000;
-
-function degreesToRadians(value: number) {
-  return (value * Math.PI) / 180;
+function isValidAscent(value: number | undefined): value is number {
+  return value !== undefined && Number.isFinite(value) && value >= 0;
 }
 
-function getCoordinateDistance(
-  firstCoordinate: number[],
-  secondCoordinate: number[],
-) {
-  const [firstLongitude, firstLatitude] = firstCoordinate;
-  const [secondLongitude, secondLatitude] = secondCoordinate;
+function getReportedAscent(
+  properties: RouteFeature['properties'],
+): number | null {
+  const featureAscent = properties?.ascent;
+  const summaryAscent = properties?.summary?.ascent;
+  const segments = properties?.segments ?? [];
 
-  if (
-    !Number.isFinite(firstLongitude) ||
-    !Number.isFinite(firstLatitude) ||
-    !Number.isFinite(secondLongitude) ||
-    !Number.isFinite(secondLatitude)
-  ) {
-    return 0;
+  if (isValidAscent(featureAscent)) {
+    return featureAscent;
+  }
+  if (isValidAscent(summaryAscent)) {
+    return summaryAscent;
   }
 
-  const latitudeDelta = degreesToRadians(secondLatitude - firstLatitude);
-  const longitudeDelta = degreesToRadians(secondLongitude - firstLongitude);
-  const firstLatitudeRadians = degreesToRadians(firstLatitude);
-  const secondLatitudeRadians = degreesToRadians(secondLatitude);
-  const haversine =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(firstLatitudeRadians) *
-      Math.cos(secondLatitudeRadians) *
-      Math.sin(longitudeDelta / 2) ** 2;
-  const clampedHaversine = Math.min(1, Math.max(0, haversine));
-
-  return (
-    2 *
-    EARTH_RADIUS_METERS *
-    Math.atan2(
-      Math.sqrt(clampedHaversine),
-      Math.sqrt(1 - clampedHaversine),
-    )
-  );
-}
-
-function sumPositiveElevationGain(coordinates: number[][]) {
-  return coordinates.reduce((gain, coordinate, index) => {
-    if (index === 0 || coordinate.length < 3) {
-      return gain;
+  let total = 0;
+  for (const {ascent} of segments) {
+    if (!isValidAscent(ascent)) {
+      return null;
     }
+    total += ascent;
+  }
 
-    const previousElevation = coordinates[index - 1][2];
-    const currentElevation = coordinate[2];
-
-    if (!Number.isFinite(previousElevation) || !Number.isFinite(currentElevation)) {
-      return gain;
-    }
-
-    return gain + Math.max(0, currentElevation - previousElevation);
-  }, 0);
+  return segments.length > 0 && Number.isFinite(total) ? total : null;
 }
 
 export function getRouteStats(route: unknown): RouteStats | null {
@@ -152,14 +125,6 @@ export function getRouteStats(route: unknown): RouteStats | null {
   const distanceMeters =
     summary?.distance ??
     segments.reduce((total, segment) => total + (segment.distance ?? 0), 0);
-  const ascentMeters =
-    summary?.ascent ??
-    (segments.some(segment => typeof segment.ascent === 'number')
-      ? segments.reduce(
-          (total, segment) => total + (segment.ascent ?? 0),
-          0,
-        )
-      : sumPositiveElevationGain(feature.geometry?.coordinates ?? []));
   const durationSeconds =
     typeof summary?.duration === 'number'
       ? summary.duration
@@ -176,7 +141,9 @@ export function getRouteStats(route: unknown): RouteStats | null {
 
   return {
     distanceMeters,
-    ascentMeters: Number.isFinite(ascentMeters) ? Math.max(0, ascentMeters) : 0,
+    ascentMeters:
+      getProfileAscent(feature.geometry?.coordinates ?? []) ??
+      getReportedAscent(feature.properties),
     durationSeconds:
       durationSeconds !== null && Number.isFinite(durationSeconds)
         ? Math.max(0, durationSeconds)
@@ -198,26 +165,7 @@ export function getElevationProfile(
     return null;
   }
 
-  let cumulativeDistance = 0;
-  const points: ElevationPoint[] = [];
-
-  coordinates.forEach((coordinate, index) => {
-    if (index > 0) {
-      cumulativeDistance += getCoordinateDistance(
-        coordinates[index - 1],
-        coordinate,
-      );
-    }
-
-    const elevation = coordinate[2];
-
-    if (Number.isFinite(elevation)) {
-      points.push({
-        distanceMeters: cumulativeDistance,
-        elevationMeters: elevation,
-      });
-    }
-  });
+  const {points, cumulativeDistance} = getElevationSamples(coordinates);
 
   if (points.length < 2 || cumulativeDistance <= 0) {
     return null;
@@ -230,7 +178,9 @@ export function getElevationProfile(
     routeDistance > 0
       ? routeDistance / cumulativeDistance
       : 1;
-  const scaledPoints = points.map(point => ({
+  const profile =
+    points.length === coordinates.length ? smoothElevation(points) : points;
+  const scaledPoints = profile.map(point => ({
     ...point,
     distanceMeters: point.distanceMeters * distanceScale,
   }));
