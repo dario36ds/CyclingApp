@@ -160,7 +160,7 @@ export function MapScreen({navigation, route: navigationRoute}: MapScreenProps) 
     ascentMeters === null
       ? null
       : formatElevation(ascentMeters, measurementSystem);
-  const elevationProfile = getElevationProfile(route);
+  const elevationProfile = useMemo(() => getElevationProfile(route), [route]);
   const terrainDetails = getRouteTerrainDetails(route);
   const selectedWaypointIndex = waypoints.findIndex(
     waypoint => waypoint.id === selectedWaypointId,

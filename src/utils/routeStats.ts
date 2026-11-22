@@ -1,4 +1,10 @@
 import type {MeasurementSystem} from '../types/measurement';
+import {
+  getElevationSamples,
+  getProfileAscent,
+  smoothElevation,
+} from './routeElevation';
+import type {ElevationPoint} from './routeElevation';
 
 type RouteSummary = {
   distance?: number;
@@ -46,10 +52,7 @@ export type RouteStats = {
   durationSeconds: number | null;
 };
 
-export type ElevationPoint = {
-  distanceMeters: number;
-  elevationMeters: number;
-};
+export type {ElevationPoint} from './routeElevation';
 
 export type ElevationProfileData = {
   points: ElevationPoint[];
@@ -76,90 +79,6 @@ const SURFACE_CATEGORIES: Record<number, string> = {
 };
 
 const PAVED_SURFACE_VALUES = new Set([1, 3, 4, 5, 6, 7, 14]);
-
-const EARTH_RADIUS_METERS = 6_371_000;
-const MIN_ELEVATION_REVERSAL_METERS = 5;
-
-function degreesToRadians(value: number) {
-  return (value * Math.PI) / 180;
-}
-
-function getCoordinateDistance(
-  firstCoordinate: number[],
-  secondCoordinate: number[],
-) {
-  const [firstLongitude, firstLatitude] = firstCoordinate;
-  const [secondLongitude, secondLatitude] = secondCoordinate;
-
-  if (
-    !Number.isFinite(firstLongitude) ||
-    !Number.isFinite(firstLatitude) ||
-    !Number.isFinite(secondLongitude) ||
-    !Number.isFinite(secondLatitude)
-  ) {
-    return 0;
-  }
-
-  const latitudeDelta = degreesToRadians(secondLatitude - firstLatitude);
-  const longitudeDelta = degreesToRadians(secondLongitude - firstLongitude);
-  const firstLatitudeRadians = degreesToRadians(firstLatitude);
-  const secondLatitudeRadians = degreesToRadians(secondLatitude);
-  const haversine =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(firstLatitudeRadians) *
-      Math.cos(secondLatitudeRadians) *
-      Math.sin(longitudeDelta / 2) ** 2;
-  const clampedHaversine = Math.min(1, Math.max(0, haversine));
-
-  return (
-    2 *
-    EARTH_RADIUS_METERS *
-    Math.atan2(
-      Math.sqrt(clampedHaversine),
-      Math.sqrt(1 - clampedHaversine),
-    )
-  );
-}
-
-function getProfileAscent(coordinates: number[][]): number | null {
-  if (
-    coordinates.length < 2 ||
-    coordinates.some(coordinate => !Number.isFinite(coordinate?.[2]))
-  ) {
-    return null;
-  }
-
-  const startElevation = coordinates[0][2];
-  const endElevation = coordinates[coordinates.length - 1][2];
-  let ascent = 0;
-  let valley = startElevation;
-  let peak = valley;
-  let climbing = false;
-
-  // Confirm a change of direction before counting the full climb.
-  for (const [, , elevation] of coordinates) {
-    if (climbing) {
-      peak = Math.max(peak, elevation);
-      if (peak - elevation >= MIN_ELEVATION_REVERSAL_METERS) {
-        ascent += peak - valley;
-        valley = elevation;
-        climbing = false;
-      }
-    } else {
-      valley = Math.min(valley, elevation);
-      if (elevation - valley >= MIN_ELEVATION_REVERSAL_METERS) {
-        peak = elevation;
-        climbing = true;
-      }
-    }
-  }
-
-  if (climbing) {
-    ascent += peak - valley;
-  }
-
-  return Math.max(ascent, endElevation - startElevation);
-}
 
 function isValidAscent(value: number | undefined): value is number {
   return value !== undefined && Number.isFinite(value) && value >= 0;
@@ -246,26 +165,7 @@ export function getElevationProfile(
     return null;
   }
 
-  let cumulativeDistance = 0;
-  const points: ElevationPoint[] = [];
-
-  coordinates.forEach((coordinate, index) => {
-    if (index > 0) {
-      cumulativeDistance += getCoordinateDistance(
-        coordinates[index - 1],
-        coordinate,
-      );
-    }
-
-    const elevation = coordinate[2];
-
-    if (Number.isFinite(elevation)) {
-      points.push({
-        distanceMeters: cumulativeDistance,
-        elevationMeters: elevation,
-      });
-    }
-  });
+  const {points, cumulativeDistance} = getElevationSamples(coordinates);
 
   if (points.length < 2 || cumulativeDistance <= 0) {
     return null;
@@ -278,7 +178,9 @@ export function getElevationProfile(
     routeDistance > 0
       ? routeDistance / cumulativeDistance
       : 1;
-  const scaledPoints = points.map(point => ({
+  const profile =
+    points.length === coordinates.length ? smoothElevation(points) : points;
+  const scaledPoints = profile.map(point => ({
     ...point,
     distanceMeters: point.distanceMeters * distanceScale,
   }));
